@@ -23,7 +23,7 @@ export function BorrowManager() {
   const apexPrice = protocolStats?.apexPrice || 0.47;
   const collateralValue = userPosition ? userPosition.collateralAmount * aptPrice : 0;
   const maxBorrowableValue = collateralValue / 1.2; // 120% collateral ratio
-  const maxBorrowableApex = maxBorrowableValue / apexPrice;
+  // const maxBorrowableApex = maxBorrowableValue / apexPrice; // Removed unused variable
   
   // Calculate available to borrow (subtract current debt)
   const currentDebtValue = userPosition ? (userPosition.borrowedAmount + userPosition.interestAccrued) * apexPrice : 0;

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 export function PriceStatus() {
   const [lastUpdate, setLastUpdate] = useState<number | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  // const [isUpdating, setIsUpdating] = useState(false); // Removed unused variables
 
   useEffect(() => {
     const checkPriceStatus = () => {

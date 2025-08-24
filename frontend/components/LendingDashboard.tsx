@@ -8,6 +8,8 @@ import { ProtocolStats } from "./ProtocolStats";
 import { BorrowingInfo } from "./BorrowingInfo";
 import { DebugInfo } from "./DebugInfo";
 import { NetworkTest } from "./NetworkTest";
+import { DexLiquidityManager } from "./DexLiquidityManager";
+import { SystemExplanation } from "./SystemExplanation";
 
 export function LendingDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -16,6 +18,9 @@ export function LendingDashboard() {
     <div className="space-y-6">
       {/* Protocol Statistics */}
       <ProtocolStats />
+      
+      {/* System Explanation */}
+      <SystemExplanation />
       
       {/* Borrowing Guide */}
       <BorrowingInfo />
@@ -38,7 +43,7 @@ export function LendingDashboard() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+            <TabsList className="grid w-full grid-cols-3 bg-muted/50">
               <TabsTrigger 
                 value="collateral" 
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -51,6 +56,12 @@ export function LendingDashboard() {
               >
                 Borrow & Repay
               </TabsTrigger>
+              <TabsTrigger 
+                value="dex" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                DEX Liquidity
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="collateral" className="mt-6">
@@ -59,6 +70,10 @@ export function LendingDashboard() {
             
             <TabsContent value="borrow" className="mt-6">
               <BorrowManager />
+            </TabsContent>
+            
+            <TabsContent value="dex" className="mt-6">
+              <DexLiquidityManager />
             </TabsContent>
           </Tabs>
         </CardContent>

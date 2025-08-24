@@ -45,7 +45,7 @@ export function DebugInfo() {
           <h4 className="font-medium text-sm">Wallet Information</h4>
           <div className="bg-muted/30 rounded p-2 text-xs font-mono">
             <div>Connected: {account?.address ? "Yes" : "No"}</div>
-            <div>Address: {account?.address || "Not connected"}</div>
+            <div>Address: {account?.address?.toString() || "Not connected"}</div>
             <div>Expected: 0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f</div>
           </div>
         </div>
