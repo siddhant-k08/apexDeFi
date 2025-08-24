@@ -12,11 +12,9 @@ import { useContractService } from "@/hooks/useContractService";
 export function DexLiquidityManager() {
   const { account } = useWallet();
   const { toast } = useToast();
-  const { addLiquidity, isLoading, protocolStats } = useContractService();
+  const { addLiquidity, isLoading, protocolStats, tokenBalances } = useContractService();
   const [aptAmount, setAptAmount] = useState("");
   const [apexAmount, setApexAmount] = useState("");
-  const [aptBalance] = useState(25.7); // TODO: Get real APT balance
-  const [apexBalance] = useState(100); // TODO: Get real APEX balance
 
   const handleAddLiquidity = async () => {
     if (!account || !aptAmount || !apexAmount || parseFloat(aptAmount) <= 0 || parseFloat(apexAmount) <= 0) {
@@ -28,7 +26,7 @@ export function DexLiquidityManager() {
       return;
     }
 
-    if (parseFloat(aptAmount) > aptBalance) {
+    if (parseFloat(aptAmount) > tokenBalances.apt) {
       toast({
         title: "Insufficient APT Balance",
         description: "You don't have enough APT tokens.",
@@ -37,7 +35,7 @@ export function DexLiquidityManager() {
       return;
     }
 
-    if (parseFloat(apexAmount) > apexBalance) {
+    if (parseFloat(apexAmount) > tokenBalances.apex) {
       toast({
         title: "Insufficient APEX Balance",
         description: "You don't have enough APEX tokens.",
@@ -75,11 +73,11 @@ export function DexLiquidityManager() {
   };
 
   const setMaxApt = () => {
-    setAptAmount(aptBalance.toString());
+    setAptAmount(tokenBalances.apt.toString());
   };
 
   const setMaxApex = () => {
-    setApexAmount(apexBalance.toString());
+    setApexAmount(tokenBalances.apex.toString());
   };
 
   return (
@@ -153,7 +151,7 @@ export function DexLiquidityManager() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Balance: {aptBalance.toFixed(2)} APT
+                Balance: {tokenBalances.apt.toFixed(4)} APT
               </p>
             </div>
 
@@ -174,7 +172,7 @@ export function DexLiquidityManager() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Balance: {apexBalance.toFixed(2)} APEX
+                Balance: {tokenBalances.apex.toFixed(4)} APEX
               </p>
             </div>
           </div>

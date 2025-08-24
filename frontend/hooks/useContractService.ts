@@ -3,12 +3,14 @@ import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { useWalletClient } from "@thalalabs/surf/hooks";
 import { contractService, UserPosition, ProtocolStats } from "@/lib/contractService";
 import { transactionService } from "@/lib/transactionService";
+import { balanceService, TokenBalance } from "@/lib/balanceService";
 
 export function useContractService() {
   const { account, connected } = useWallet();
   const { client: walletClient } = useWalletClient();
   const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
   const [protocolStats, setProtocolStats] = useState<ProtocolStats | null>(null);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalance>({ apt: 0, apex: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +48,18 @@ export function useContractService() {
     }
   };
 
+  // Fetch token balances
+  const fetchTokenBalances = async () => {
+    if (!account?.address) return;
+    
+    try {
+      const balances = await balanceService.getTokenBalances(account.address.toString());
+      setTokenBalances(balances);
+    } catch (err) {
+      console.error("Error fetching token balances:", err);
+    }
+  };
+
   // Refresh all data
   const refreshData = async () => {
     try {
@@ -54,7 +68,8 @@ export function useContractService() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       await Promise.all([
         fetchUserPosition(),
-        fetchProtocolStats()
+        fetchProtocolStats(),
+        fetchTokenBalances()
       ]);
     } catch (error) {
       console.error("Error refreshing data:", error);
@@ -172,6 +187,7 @@ export function useContractService() {
     // Data
     userPosition,
     protocolStats,
+    tokenBalances,
     isLoading,
     error,
     

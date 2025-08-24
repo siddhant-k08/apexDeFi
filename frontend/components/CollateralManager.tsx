@@ -5,28 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useContractService } from "@/hooks/useContractService";
 
 export function CollateralManager() {
   const { account } = useWallet();
   const { toast } = useToast();
-  const { addCollateral, withdrawCollateral, isLoading, protocolStats, userPosition, refreshData } = useContractService();
+  const { addCollateral, withdrawCollateral, isLoading, protocolStats, userPosition, refreshData, tokenBalances } = useContractService();
   const [amount, setAmount] = useState("");
-  const [aptBalance] = useState(25.7); // TODO: Get real APT balance from wallet
 
   const handleAddCollateral = async () => {
-    if (!account || !amount || parseFloat(amount) <= 0) {
+    if (!amount || parseFloat(amount) <= 0) {
       toast({
         title: "Invalid Amount",
-        description: "Please enter a valid amount to add as collateral.",
+        description: "Please enter a valid amount.",
         variant: "destructive",
       });
       return;
     }
 
-    if (parseFloat(amount) > aptBalance) {
+    if (parseFloat(amount) > tokenBalances.apt) {
       toast({
         title: "Insufficient Balance",
         description: "You don't have enough APT tokens.",
@@ -51,31 +49,20 @@ export function CollateralManager() {
       });
       
       setAmount("");
-      
-      // Show refresh reminder
-      setTimeout(() => {
-        toast({
-          title: "Data Refreshed",
-          description: "Your position has been updated. Check the debug info below for details.",
-          variant: "default",
-        });
-      }, 3000);
-      
     } catch (error) {
-      console.error("Add collateral error:", error);
       toast({
         title: "Transaction Failed",
-        description: `Failed to add collateral: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: "Failed to add collateral. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   const handleWithdrawCollateral = async () => {
-    if (!account || !amount || parseFloat(amount) <= 0) {
+    if (!amount || parseFloat(amount) <= 0) {
       toast({
         title: "Invalid Amount",
-        description: "Please enter a valid amount to withdraw.",
+        description: "Please enter a valid amount.",
         variant: "destructive",
       });
       return;
@@ -101,119 +88,87 @@ export function CollateralManager() {
   };
 
   const setMaxAmount = () => {
-    setAmount(aptBalance.toString());
+    setAmount(tokenBalances.apt.toString());
   };
 
   return (
-    <div className="space-y-6">
-      {/* Balance Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-secondary/30 border-secondary">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Available APT Balance</p>
-                <p className="text-xl font-semibold text-foreground">
-                  {aptBalance.toFixed(2)} APT
+    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+          Manage Collateral
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Balance Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+            <CardContent className="p-4">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Available APT</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                  {tokenBalances.apt.toFixed(4)} APT
+                </p>
+                <p className="text-sm text-slate-500">
+                  ≈ ${(tokenBalances.apt * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
                 </p>
               </div>
-              <Badge variant="outline" className="text-xs">
-                ≈ ${(aptBalance * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-primary/30 border-primary">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Current Collateral</p>
-                <p className="text-xl font-semibold text-foreground">
-                  {userPosition?.collateralAmount.toFixed(4) || "0.0000"} APT
+          <Card className="bg-green-50/50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
+            <CardContent className="p-4">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Current Collateral</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                  {userPosition?.collateralAmount ? (userPosition.collateralAmount / Math.pow(10, 8)).toFixed(4) : "0.0000"} APT
+                </p>
+                <p className="text-sm text-slate-500">
+                  ≈ ${userPosition?.collateralAmount ? ((userPosition.collateralAmount / Math.pow(10, 8)) * (protocolStats?.aptPrice || 4.70)).toFixed(2) : "0.00"} USD
                 </p>
               </div>
-              <Badge variant="outline" className="text-xs">
-                ≈ ${((userPosition?.collateralAmount || 0) * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Refresh Button */}
-      <div className="flex justify-end">
-        <Button 
-          onClick={refreshData} 
-          disabled={isLoading}
-          variant="outline" 
-          size="sm"
-        >
-          {isLoading ? "Refreshing..." : "🔄 Refresh Data"}
-        </Button>
-      </div>
-
-      {/* Add Collateral */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg text-foreground flex items-center gap-2">
-            <div className="w-2 h-2 bg-success rounded-full"></div>
-            Add Collateral
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="add-amount" className="text-sm font-medium">
+        {/* Add Collateral */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Add Collateral</h3>
+          <div className="space-y-3">
+            <Label htmlFor="add-amount" className="text-base font-medium">
               Amount (APT)
             </Label>
             <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="add-amount"
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="pr-16"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
-                  onClick={setMaxAmount}
-                >
-                  MAX
-                </Button>
-              </div>
+              <Input
+                id="add-amount"
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="text-lg"
+              />
+              <Button
+                variant="outline"
+                onClick={setMaxAmount}
+                className="px-4"
+              >
+                MAX
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Adding collateral increases your borrowing capacity
-            </p>
+            <Button 
+              onClick={handleAddCollateral}
+              disabled={!amount || parseFloat(amount) <= 0 || isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg py-3"
+            >
+              {isLoading ? "Adding..." : "Add Collateral"}
+            </Button>
           </div>
+        </div>
 
-          <Button 
-            onClick={handleAddCollateral}
-            disabled={!amount || parseFloat(amount) <= 0 || isLoading}
-            className="w-full bg-success hover:bg-success/90 text-success-foreground"
-          >
-            {isLoading ? "Adding Collateral..." : "Add Collateral"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      {/* Withdraw Collateral */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg text-foreground flex items-center gap-2">
-            <div className="w-2 h-2 bg-warning rounded-full"></div>
-            Withdraw Collateral
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="withdraw-amount" className="text-sm font-medium">
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">Withdraw Collateral</h3>
+          <div className="space-y-3">
+            <Label htmlFor="withdraw-amount" className="text-base font-medium">
               Amount (APT)
             </Label>
             <Input
@@ -222,39 +177,31 @@ export function CollateralManager() {
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              className="text-lg"
             />
-            <p className="text-xs text-muted-foreground">
-              ⚠️ Ensure your position remains above 120% collateral ratio
-            </p>
+            <Button 
+              onClick={handleWithdrawCollateral}
+              disabled={!amount || parseFloat(amount) <= 0 || isLoading}
+              variant="outline"
+              className="w-full text-lg py-3 border-orange-300 text-orange-700 hover:bg-orange-50"
+            >
+              {isLoading ? "Withdrawing..." : "Withdraw Collateral"}
+            </Button>
           </div>
+        </div>
 
+        {/* Refresh Button */}
+        <div className="flex justify-end">
           <Button 
-            onClick={handleWithdrawCollateral}
-            disabled={!amount || parseFloat(amount) <= 0 || isLoading}
-            variant="outline"
-            className="w-full border-warning text-warning hover:bg-warning hover:text-warning-foreground"
+            onClick={refreshData} 
+            disabled={isLoading}
+            variant="outline" 
+            size="sm"
           >
-            {isLoading ? "Withdrawing..." : "Withdraw Collateral"}
+            {isLoading ? "Refreshing..." : "🔄 Refresh"}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Info Box */}
-      <Card className="bg-accent/20 border-accent/30">
-        <CardContent className="p-4">
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-foreground">
-              💡 Collateral Tips
-            </h4>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Minimum 120% collateral ratio required</li>
-              <li>• Higher ratios provide better protection against liquidation</li>
-              <li>• APT price changes affect your collateral value</li>
-              <li>• You can add collateral anytime to improve your position</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

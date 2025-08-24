@@ -1,138 +1,138 @@
-import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useContractService } from "@/hooks/useContractService";
 
 export function PositionOverview() {
-  const { account } = useWallet();
-  const { userPosition, isLoading, protocolStats } = useContractService();
-  
-  // Calculate collateral ratio from real data
-  const collateralRatio = userPosition && userPosition.collateralAmount > 0 
-    ? (userPosition.collateralAmount * (protocolStats?.aptPrice || 4.70)) / (userPosition.borrowedAmount + userPosition.interestAccrued) * 100
-    : 0;
+  const { userPosition, protocolStats } = useContractService();
 
-  if (!account) {
-    return null;
-  }
-
-  const getRatioColor = (ratio: number) => {
-    if (ratio >= 150) return "text-success";
-    if (ratio >= 130) return "text-warning";
-    return "text-destructive";
-  };
-
-  const getRatioStatus = (ratio: number) => {
-    if (ratio >= 150) return "Safe";
-    if (ratio >= 130) return "Moderate";
-    return "At Risk";
-  };
-
-  return (
-    <Card className="shadow-lg border-0 bg-card/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="text-xl text-foreground flex items-center gap-2">
-          Your Position
-          {userPosition && (
-            <Badge 
-              variant="outline" 
-              className={`${getRatioColor(collateralRatio)} border-current`}
-            >
-              {getRatioStatus(collateralRatio)}
-            </Badge>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-4">
-            <div className="animate-pulse">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="h-8 bg-muted rounded"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : userPosition ? (
-          <div className="space-y-6">
-            {/* Position Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Collateral (APT)</p>
-                <p className="text-2xl font-semibold text-foreground">
-                  {userPosition.collateralAmount.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  ≈ ${(userPosition.collateralAmount * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Borrowed (APEX)</p>
-                <p className="text-2xl font-semibold text-foreground">
-                  {userPosition.borrowedAmount.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Interest: {userPosition.interestAccrued.toFixed(4)} APEX
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Collateral Ratio</p>
-                <p className={`text-2xl font-semibold ${getRatioColor(collateralRatio)}`}>
-                  {collateralRatio}%
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Min: 120%
-                </p>
-              </div>
-            </div>
-
-            {/* Health Factor Progress */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Position Health</p>
-                <p className="text-sm font-medium text-foreground">
-                  {getRatioStatus(collateralRatio)}
-                </p>
-              </div>
-              <Progress 
-                value={Math.min((collateralRatio / 200) * 100, 100)} 
-                className="h-2"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Liquidation (120%)</span>
-                <span>Safe (200%+)</span>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary" className="text-xs">
-                Last updated: {new Date(userPosition.lastUpdated).toLocaleDateString()}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                5% Annual Interest
-              </Badge>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-8 space-y-2">
-            <div className="mx-auto w-12 h-12 bg-muted/50 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <p className="text-muted-foreground">No active position</p>
-            <p className="text-sm text-muted-foreground">
-              Add collateral to start borrowing
+  if (!userPosition) {
+    return (
+      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+            Your Position
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-lg text-slate-600 dark:text-slate-400">
+              No position found. Add collateral to get started.
             </p>
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Calculate position metrics
+  const collateralAmount = userPosition.collateralAmount / Math.pow(10, 8);
+  const borrowedAmount = userPosition.borrowedAmount / Math.pow(10, 8);
+  const interestAccrued = userPosition.interestAccrued / Math.pow(10, 8);
+  
+  const collateralValue = collateralAmount * (protocolStats?.aptPrice || 4.70);
+  const debtValue = (borrowedAmount + interestAccrued) * (protocolStats?.apexPrice || 0.47);
+  const collateralRatio = debtValue > 0 ? (collateralValue / debtValue) * 100 : 0;
+  const utilizationPercentage = Math.min((debtValue / collateralValue) * 100, 100);
+
+  // Determine status
+  let status = "Safe";
+  let statusColor = "text-green-600";
+  let statusBg = "bg-green-100";
+  
+  if (collateralRatio < 150) {
+    status = "Moderate";
+    statusColor = "text-yellow-600";
+    statusBg = "bg-yellow-100";
+  }
+  if (collateralRatio < 120) {
+    status = "High Risk";
+    statusColor = "text-red-600";
+    statusBg = "bg-red-100";
+  }
+
+  return (
+    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+          Your Position
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Position Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center space-y-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400">Collateral</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+              {collateralAmount.toFixed(4)} APT
+            </p>
+            <p className="text-sm text-slate-500">
+              ≈ ${collateralValue.toFixed(2)} USD
+            </p>
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400">Debt</p>
+            <p className="text-2xl font-bold text-red-600">
+              {(borrowedAmount + interestAccrued).toFixed(4)} APEX
+            </p>
+            <p className="text-sm text-slate-500">
+              ≈ ${debtValue.toFixed(2)} USD
+            </p>
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400">Collateral Ratio</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+              {collateralRatio.toFixed(1)}%
+            </p>
+            <Badge className={`${statusBg} ${statusColor} border-0`}>
+              {status}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Utilization Progress */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-slate-600 dark:text-slate-400">Position Utilization</span>
+            <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+              {utilizationPercentage.toFixed(1)}%
+            </span>
+          </div>
+          <Progress value={utilizationPercentage} className="h-3" />
+          <div className="flex justify-between text-xs text-slate-500">
+            <span>0% (Safe)</span>
+            <span>83.3% (120% Ratio)</span>
+            <span>100% (Max)</span>
+          </div>
+        </div>
+
+        {/* Interest Info */}
+        {interestAccrued > 0 && (
+          <Card className="bg-yellow-50/50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800">
+            <CardContent className="p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-yellow-800 dark:text-yellow-200">
+                  Accrued Interest: {interestAccrued.toFixed(4)} APEX
+                </span>
+                <Badge variant="outline" className="text-xs border-yellow-300 text-yellow-700">
+                  Pay Interest
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Risk Warning */}
+        {collateralRatio < 150 && (
+          <Card className="bg-orange-50/50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800">
+            <CardContent className="p-3">
+              <p className="text-sm text-orange-800 dark:text-orange-200">
+                ⚠️ Your collateral ratio is {collateralRatio.toFixed(1)}%. Consider adding more collateral or repaying debt to improve your position.
+              </p>
+            </CardContent>
+          </Card>
         )}
       </CardContent>
     </Card>
