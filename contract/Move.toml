@@ -1,0 +1,12 @@
+[package]
+name = "ApexLending"
+version = "1.0.0"
+authors = ["Apex Lending Protocol"]
+
+[addresses]
+apex_lending = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f"
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-framework" }
+
+[dev-dependencies]
