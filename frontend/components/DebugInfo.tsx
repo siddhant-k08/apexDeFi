@@ -1,67 +1,65 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useContractService } from "@/hooks/useContractService";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { 
+  LENDING_ADDRESS,
+  APEX_DEX_ADDRESS,
+  APEX_TOKEN_ADDRESS
+} from "@/constants";
 
 export function DebugInfo() {
-  const { userPosition, protocolStats, isLoading } = useContractService();
   const { account } = useWallet();
+  const { userPosition, protocolStats } = useContractService();
 
   return (
-    <Card className="shadow-md border-0 bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200">
+    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-lg text-foreground flex items-center gap-2">
-          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+        <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">
           Debug Information
-          <Badge variant="outline" className="text-xs">
-            Development
-          </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">User Position Data</h4>
-            <div className="bg-muted/30 rounded p-2 text-xs font-mono">
-              <div>Collateral: {userPosition?.collateralAmount.toFixed(8) || "0"} APT</div>
-              <div>Borrowed: {userPosition?.borrowedAmount.toFixed(8) || "0"} APEX</div>
-              <div>Interest: {userPosition?.interestAccrued.toFixed(8) || "0"} APEX</div>
-              <div>Last Updated: {userPosition?.lastUpdated ? new Date(userPosition.lastUpdated).toLocaleString() : "Never"}</div>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">Protocol Stats</h4>
-            <div className="bg-muted/30 rounded p-2 text-xs font-mono">
-              <div>Total Collateral: {protocolStats?.totalCollateral.toFixed(8) || "0"} APT</div>
-              <div>Total Borrowed: {protocolStats?.totalBorrowed.toFixed(8) || "0"} APEX</div>
-              <div>APT Price: ${protocolStats?.aptPrice.toFixed(4) || "0"}</div>
-              <div>APEX Price: ${protocolStats?.apexPrice.toFixed(4) || "0"}</div>
+      <CardContent className="space-y-6">
+        {/* Wallet Info */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Connected Wallet</h4>
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+            <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+              <div>Address: {account?.address?.toString() || "Not connected"}</div>
+              <div>Expected: {account?.address?.toString().slice(0, 66)}...</div>
             </div>
           </div>
         </div>
-        
+
+        {/* User Position */}
         <div className="space-y-2">
-          <h4 className="font-medium text-sm">Wallet Information</h4>
-          <div className="bg-muted/30 rounded p-2 text-xs font-mono">
-            <div>Connected: {account?.address ? "Yes" : "No"}</div>
-            <div>Address: {account?.address?.toString() || "Not connected"}</div>
-            <div>Expected: 0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f</div>
+          <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">User Position</h4>
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+            <pre className="text-xs text-slate-600 dark:text-slate-400">
+              {JSON.stringify(userPosition, null, 2)}
+            </pre>
           </div>
         </div>
-        
+
+        {/* Protocol Stats */}
         <div className="space-y-2">
-          <h4 className="font-medium text-sm">Contract Addresses</h4>
-          <div className="bg-muted/30 rounded p-2 text-xs font-mono">
-            <div>Lending: 0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::lending</div>
-            <div>DEX: 0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::apex_dex</div>
-            <div>Token: 0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::apex_token</div>
+          <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Protocol Stats</h4>
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+            <pre className="text-xs text-slate-600 dark:text-slate-400">
+              {JSON.stringify(protocolStats, null, 2)}
+            </pre>
           </div>
         </div>
-        
-        <div className="text-xs text-muted-foreground">
-          <p>Status: {isLoading ? "Loading..." : "Ready"}</p>
-          <p>Last Check: {new Date().toLocaleTimeString()}</p>
+
+        {/* Contract Addresses */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Contract Addresses</h4>
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+            <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+              <div>Lending: {LENDING_ADDRESS}</div>
+              <div>DEX: {APEX_DEX_ADDRESS}</div>
+              <div>Token: {APEX_TOKEN_ADDRESS}</div>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

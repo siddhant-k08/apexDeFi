@@ -4,6 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useContractService } from "@/hooks/useContractService";
 import { DexLiquidityManager } from "./DexLiquidityManager";
+import { 
+  DEFAULT_APT_PRICE, 
+  DEFAULT_APEX_PRICE,
+  DEX_APT_RESERVES,
+  DEX_APEX_RESERVES,
+  DEX_EXCHANGE_RATE
+} from "@/constants";
 
 export function DexDashboard() {
   const { connected } = useWallet();
@@ -57,25 +64,25 @@ export function DexDashboard() {
             <div className="text-center space-y-2">
               <p className="text-sm text-slate-600 dark:text-slate-400">APT Reserves</p>
               <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                1.00 APT
+                {DEX_APT_RESERVES.toFixed(2)} APT
               </p>
               <p className="text-sm text-slate-500">
-                ≈ ${(1.0 * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
+                ≈ ${(DEX_APT_RESERVES * (protocolStats?.aptPrice || DEFAULT_APT_PRICE)).toFixed(2)} USD
               </p>
             </div>
             <div className="text-center space-y-2">
               <p className="text-sm text-slate-600 dark:text-slate-400">APEX Reserves</p>
               <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                10.00 APEX
+                {DEX_APEX_RESERVES.toFixed(2)} APEX
               </p>
               <p className="text-sm text-slate-500">
-                ≈ ${(10.0 * (protocolStats?.apexPrice || 0.47)).toFixed(2)} USD
+                ≈ ${(DEX_APEX_RESERVES * (protocolStats?.apexPrice || DEFAULT_APEX_PRICE)).toFixed(2)} USD
               </p>
             </div>
             <div className="text-center space-y-2">
               <p className="text-sm text-slate-600 dark:text-slate-400">Exchange Rate</p>
               <p className="text-3xl font-bold text-blue-600">
-                1 APT = 10 APEX
+                1 APT = {DEX_EXCHANGE_RATE} APEX
               </p>
               <Badge variant="outline" className="text-xs">
                 Current Rate

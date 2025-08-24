@@ -6,6 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { useContractService } from "@/hooks/useContractService";
+import { 
+  COLLATERAL_RATIO, 
+  DEFAULT_APT_PRICE, 
+  DEFAULT_APEX_PRICE,
+  OCTAS_PER_TOKEN 
+} from "@/constants";
 
 export function BorrowManager() {
   const { toast } = useToast();
@@ -13,11 +19,11 @@ export function BorrowManager() {
   const [amount, setAmount] = useState("");
 
   // Calculate borrowing capacity
-  const collateralValue = userPosition?.collateralAmount ? (userPosition.collateralAmount / Math.pow(10, 8)) * (protocolStats?.aptPrice || 4.70) : 0;
-  const maxBorrowableValue = collateralValue / 1.2; // 120% collateral ratio
-  const currentDebtValue = userPosition?.borrowedAmount ? (userPosition.borrowedAmount / Math.pow(10, 8)) * (protocolStats?.apexPrice || 0.47) : 0;
+  const collateralValue = userPosition?.collateralAmount ? (userPosition.collateralAmount / OCTAS_PER_TOKEN) * (protocolStats?.aptPrice || DEFAULT_APT_PRICE) : 0;
+  const maxBorrowableValue = collateralValue / COLLATERAL_RATIO; // 120% collateral ratio
+  const currentDebtValue = userPosition?.borrowedAmount ? (userPosition.borrowedAmount / OCTAS_PER_TOKEN) * (protocolStats?.apexPrice || DEFAULT_APEX_PRICE) : 0;
   const availableToBorrow = Math.max(0, maxBorrowableValue - currentDebtValue);
-  const availableToBorrowApex = availableToBorrow / (protocolStats?.apexPrice || 0.47);
+  const availableToBorrowApex = availableToBorrow / (protocolStats?.apexPrice || DEFAULT_APEX_PRICE);
   const utilizationPercentage = maxBorrowableValue > 0 ? (currentDebtValue / maxBorrowableValue) * 100 : 0;
 
   const handleBorrowApex = async () => {
@@ -143,7 +149,7 @@ export function BorrowManager() {
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Current Debt</p>
                   <p className="text-xl font-bold text-red-600">
-                    {userPosition?.borrowedAmount ? (userPosition.borrowedAmount / Math.pow(10, 8)).toFixed(2) : "0.00"} APEX
+                    {userPosition?.borrowedAmount ? (userPosition.borrowedAmount / OCTAS_PER_TOKEN).toFixed(2) : "0.00"} APEX
                   </p>
                   <p className="text-sm text-slate-500">
                     ≈ ${currentDebtValue.toFixed(2)} USD

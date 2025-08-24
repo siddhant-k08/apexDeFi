@@ -6,6 +6,11 @@ import { useContractService } from "@/hooks/useContractService";
 import { CollateralManager } from "./CollateralManager";
 import { BorrowManager } from "./BorrowManager";
 import { PositionOverview } from "./PositionOverview";
+import { 
+  DEFAULT_APT_PRICE, 
+  DEFAULT_APEX_PRICE, 
+  OCTAS_PER_TOKEN 
+} from "@/constants";
 
 export function LendingDashboard() {
   const { connected } = useWallet();
@@ -59,25 +64,25 @@ export function LendingDashboard() {
             <div className="text-center space-y-2">
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Collateral</p>
               <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                {protocolStats?.totalCollateral ? (protocolStats.totalCollateral / Math.pow(10, 8)).toFixed(2) : "0.00"} APT
+                {protocolStats?.totalCollateral ? (protocolStats.totalCollateral / OCTAS_PER_TOKEN).toFixed(2) : "0.00"} APT
               </p>
               <p className="text-sm text-slate-500">
-                ≈ ${protocolStats?.totalCollateral ? ((protocolStats.totalCollateral / Math.pow(10, 8)) * (protocolStats.aptPrice || 4.70)).toFixed(2) : "0.00"} USD
+                ≈ ${protocolStats?.totalCollateral ? ((protocolStats.totalCollateral / OCTAS_PER_TOKEN) * (protocolStats.aptPrice || DEFAULT_APT_PRICE)).toFixed(2) : "0.00"} USD
               </p>
             </div>
             <div className="text-center space-y-2">
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Borrowed</p>
               <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                {protocolStats?.totalBorrowed ? (protocolStats.totalBorrowed / Math.pow(10, 8)).toFixed(2) : "0.00"} APEX
+                {protocolStats?.totalBorrowed ? (protocolStats.totalBorrowed / OCTAS_PER_TOKEN).toFixed(2) : "0.00"} APEX
               </p>
               <p className="text-sm text-slate-500">
-                ≈ ${protocolStats?.totalBorrowed ? ((protocolStats.totalBorrowed / Math.pow(10, 8)) * (protocolStats.apexPrice || 0.47)).toFixed(2) : "0.00"} USD
+                ≈ ${protocolStats?.totalBorrowed ? ((protocolStats.totalBorrowed / OCTAS_PER_TOKEN) * (protocolStats.apexPrice || DEFAULT_APEX_PRICE)).toFixed(2) : "0.00"} USD
               </p>
             </div>
             <div className="text-center space-y-2">
               <p className="text-sm text-slate-600 dark:text-slate-400">APT Price</p>
               <p className="text-3xl font-bold text-green-600">
-                ${protocolStats?.aptPrice?.toFixed(2) || "4.70"}
+                ${protocolStats?.aptPrice?.toFixed(2) || DEFAULT_APT_PRICE.toFixed(2)}
               </p>
               <Badge variant="outline" className="text-xs">
                 Live Price

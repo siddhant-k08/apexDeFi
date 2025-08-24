@@ -1,4 +1,8 @@
 import { aptosClient } from "@/utils/aptosClient";
+import { 
+  OCTAS_PER_TOKEN,
+  APEX_TOKEN_ADDRESS 
+} from "@/constants";
 
 export interface TokenBalance {
   apt: number;
@@ -25,7 +29,7 @@ export class BalanceService {
 
       if (resource && resource.data) {
         const balance = (resource.data as any).coin?.value || "0";
-        const balanceInApt = Number(balance) / Math.pow(10, 8); // Convert from octas
+        const balanceInApt = Number(balance) / OCTAS_PER_TOKEN; // Convert from octas
         console.log("APT balance in octas:", balance, "APT:", balanceInApt);
         return balanceInApt;
       }
@@ -48,14 +52,14 @@ export class BalanceService {
       
       const resource = await this.client.getAccountResource({
         accountAddress: userAddress,
-        resourceType: "0x1::coin::CoinStore<0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::apex_token::APEX>"
+        resourceType: `0x1::coin::CoinStore<${APEX_TOKEN_ADDRESS}>`
       });
 
       console.log("APEX balance resource:", resource);
 
       if (resource && resource.data) {
         const balance = (resource.data as any).coin?.value || "0";
-        const balanceInApex = Number(balance) / Math.pow(10, 8); // Convert from octas
+        const balanceInApex = Number(balance) / OCTAS_PER_TOKEN; // Convert from octas
         console.log("APEX balance in octas:", balance, "APEX:", balanceInApex);
         return balanceInApex;
       }

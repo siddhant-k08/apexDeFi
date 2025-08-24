@@ -2,6 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useContractService } from "@/hooks/useContractService";
+import { 
+  DEFAULT_APT_PRICE, 
+  DEFAULT_APEX_PRICE, 
+  OCTAS_PER_TOKEN,
+  LIQUIDATION_RATIO 
+} from "@/constants";
 
 export function PositionOverview() {
   const { userPosition, protocolStats } = useContractService();
@@ -27,12 +33,12 @@ export function PositionOverview() {
   }
 
   // Calculate position metrics
-  const collateralAmount = userPosition.collateralAmount / Math.pow(10, 8);
-  const borrowedAmount = userPosition.borrowedAmount / Math.pow(10, 8);
-  const interestAccrued = userPosition.interestAccrued / Math.pow(10, 8);
+  const collateralAmount = userPosition.collateralAmount / OCTAS_PER_TOKEN;
+  const borrowedAmount = userPosition.borrowedAmount / OCTAS_PER_TOKEN;
+  const interestAccrued = userPosition.interestAccrued / OCTAS_PER_TOKEN;
   
-  const collateralValue = collateralAmount * (protocolStats?.aptPrice || 4.70);
-  const debtValue = (borrowedAmount + interestAccrued) * (protocolStats?.apexPrice || 0.47);
+  const collateralValue = collateralAmount * (protocolStats?.aptPrice || DEFAULT_APT_PRICE);
+  const debtValue = (borrowedAmount + interestAccrued) * (protocolStats?.apexPrice || DEFAULT_APEX_PRICE);
   const collateralRatio = debtValue > 0 ? (collateralValue / debtValue) * 100 : 0;
   const utilizationPercentage = Math.min((debtValue / collateralValue) * 100, 100);
 
@@ -46,7 +52,7 @@ export function PositionOverview() {
     statusColor = "text-yellow-600";
     statusBg = "bg-yellow-100";
   }
-  if (collateralRatio < 120) {
+  if (collateralRatio < LIQUIDATION_RATIO * 100) {
     status = "High Risk";
     statusColor = "text-red-600";
     statusBg = "bg-red-100";

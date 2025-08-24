@@ -3,133 +3,185 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { aptosClient } from "@/utils/aptosClient";
-import { NETWORK, APTOS_API_KEY } from "@/constants";
+import { 
+  NETWORK, 
+  APTOS_API_KEY,
+  LENDING_ADDRESS,
+  APEX_TOKEN_ADDRESS
+} from "@/constants";
+
+interface TestResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+  timestamp: string;
+}
+
+interface TestResults {
+  [key: string]: TestResult;
+}
 
 export function NetworkTest() {
-  const [testResult, setTestResult] = useState<string>("");
+  const [testResults, setTestResults] = useState<TestResults>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const testContractCall = async () => {
+  const testTotalCollateral = async () => {
     setIsLoading(true);
-    setTestResult("Testing...");
-    
     try {
       const client = aptosClient();
-      console.log("Testing with client:", client);
-      console.log("Network:", NETWORK);
-      console.log("Client config:", client.config);
-      
-      // Test a simple contract call
       const payload = {
-        function: "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::lending::get_total_collateral",
+        function: `${LENDING_ADDRESS}::get_total_collateral`,
         type_arguments: [],
-        arguments: ["0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f"]
+        arguments: []
       };
       
-      console.log("Test payload:", payload);
+      console.log("Testing total collateral with payload:", payload);
       
       // @ts-ignore - SDK type issues
       const response = await client.view({ payload });
       
-      console.log("Test response:", response);
-      setTestResult(`Success! Response: ${JSON.stringify(response)}`);
+      console.log("Total collateral response:", response);
       
+      setTestResults((prev: TestResults) => ({
+        ...prev,
+        totalCollateral: {
+          success: true,
+          data: response,
+          timestamp: new Date().toISOString()
+        }
+      }));
     } catch (error) {
-      console.error("Test error:", error);
-      console.error("Error details:", {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace',
-        error: error
-      });
-      setTestResult(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Total collateral test error:", error);
+      setTestResults((prev: TestResults) => ({
+        ...prev,
+        totalCollateral: {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        }
+      }));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const testSimpleCall = async () => {
+  const testApexSupply = async () => {
     setIsLoading(true);
-    setTestResult("Testing simple call...");
-    
     try {
       const client = aptosClient();
-      
-      // Test a simple APEX token supply call (no arguments needed)
       const payload = {
-        function: "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::apex_token::get_supply",
+        function: `${APEX_TOKEN_ADDRESS}::get_supply`,
         type_arguments: [],
         arguments: []
       };
       
-      console.log("Simple test payload:", payload);
+      console.log("Testing APEX supply with payload:", payload);
       
       // @ts-ignore - SDK type issues
       const response = await client.view({ payload });
       
-      console.log("Simple test response:", response);
-      setTestResult(`Simple Success! Response: ${JSON.stringify(response)}`);
+      console.log("APEX supply response:", response);
       
+      setTestResults((prev: TestResults) => ({
+        ...prev,
+        apexSupply: {
+          success: true,
+          data: response,
+          timestamp: new Date().toISOString()
+        }
+      }));
     } catch (error) {
-      console.error("Simple test error:", error);
-      console.error("Simple error details:", {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace',
-        error: error
-      });
-      setTestResult(`Simple Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("APEX supply test error:", error);
+      setTestResults((prev: TestResults) => ({
+        ...prev,
+        apexSupply: {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        }
+      }));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="shadow-md border-0 bg-blue-50 dark:bg-blue-950/20 border-blue-200">
+    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-lg text-foreground flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-          Network & Contract Test
-          <Badge variant="outline" className="text-xs">
-            Debug
-          </Badge>
+        <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">
+          Network & Contract Tests
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm">Network Configuration</h4>
-          <div className="bg-muted/30 rounded p-2 text-xs font-mono">
-            <div>Network: {NETWORK}</div>
-            <div>API Key: {APTOS_API_KEY ? "Set" : "Not set"}</div>
-            <div>Client: {aptosClient().constructor.name}</div>
-            <div>Client Config: {JSON.stringify(aptosClient().config, null, 2)}</div>
+      <CardContent className="space-y-6">
+        {/* Configuration Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400">Network</p>
+            <Badge variant="outline">{NETWORK}</Badge>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400">API Key</p>
+            <Badge variant="outline">
+              {APTOS_API_KEY ? "Configured" : "Not Set"}
+            </Badge>
           </div>
         </div>
-        
-        <div className="flex gap-2">
+
+        {/* Client Config */}
+        <div className="space-y-2">
+          <p className="text-sm text-slate-600 dark:text-slate-400">Client Configuration</p>
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+            <pre className="text-xs text-slate-600 dark:text-slate-400">
+              {JSON.stringify(aptosClient().config, null, 2)}
+            </pre>
+          </div>
+        </div>
+
+        {/* Test Buttons */}
+        <div className="flex gap-4">
           <Button 
-            onClick={testContractCall} 
+            onClick={testTotalCollateral}
             disabled={isLoading}
             variant="outline"
           >
-            {isLoading ? "Testing..." : "Test Total Collateral"}
+            Test Total Collateral
           </Button>
-          
           <Button 
-            onClick={testSimpleCall} 
+            onClick={testApexSupply}
             disabled={isLoading}
             variant="outline"
           >
-            {isLoading ? "Testing..." : "Test APEX Supply"}
+            Test APEX Supply
           </Button>
         </div>
-        
-        {testResult && (
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">Test Result</h4>
-            <div className="bg-muted/30 rounded p-2 text-xs font-mono">
-              <div>{testResult}</div>
-            </div>
+
+        {/* Test Results */}
+        {Object.keys(testResults).length > 0 && (
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Test Results</h4>
+            {Object.entries(testResults).map(([testName, result]: [string, TestResult]) => (
+              <div key={testName} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant={result.success ? "default" : "destructive"}>
+                    {result.success ? "✅ Success" : "❌ Failed"}
+                  </Badge>
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    {testName}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {new Date(result.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                  <pre className="text-xs text-slate-600 dark:text-slate-400">
+                    {result.success 
+                      ? JSON.stringify(result.data, null, 2)
+                      : result.error
+                    }
+                  </pre>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </CardContent>

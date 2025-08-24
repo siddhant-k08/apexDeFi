@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useContractService } from "@/hooks/useContractService";
+import { 
+  DEFAULT_APT_PRICE, 
+  OCTAS_PER_TOKEN 
+} from "@/constants";
 
 export function CollateralManager() {
   const { toast } = useToast();
@@ -107,7 +111,7 @@ export function CollateralManager() {
                   {tokenBalances.apt.toFixed(4)} APT
                 </p>
                 <p className="text-sm text-slate-500">
-                  ≈ ${(tokenBalances.apt * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
+                  ≈ ${(tokenBalances.apt * (protocolStats?.aptPrice || DEFAULT_APT_PRICE)).toFixed(2)} USD
                 </p>
               </div>
             </CardContent>
@@ -118,10 +122,10 @@ export function CollateralManager() {
               <div className="text-center space-y-2">
                 <p className="text-sm text-slate-600 dark:text-slate-400">Current Collateral</p>
                 <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                  {userPosition?.collateralAmount ? (userPosition.collateralAmount / Math.pow(10, 8)).toFixed(4) : "0.0000"} APT
+                  {userPosition?.collateralAmount ? (userPosition.collateralAmount / OCTAS_PER_TOKEN).toFixed(4) : "0.0000"} APT
                 </p>
                 <p className="text-sm text-slate-500">
-                  ≈ ${userPosition?.collateralAmount ? ((userPosition.collateralAmount / Math.pow(10, 8)) * (protocolStats?.aptPrice || 4.70)).toFixed(2) : "0.00"} USD
+                  ≈ ${userPosition?.collateralAmount ? ((userPosition.collateralAmount / OCTAS_PER_TOKEN) * (protocolStats?.aptPrice || DEFAULT_APT_PRICE)).toFixed(2) : "0.00"} USD
                 </p>
               </div>
             </CardContent>
