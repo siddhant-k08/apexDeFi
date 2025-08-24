@@ -1,20 +1,15 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { aptosClient } from "@/utils/aptosClient";
-import { 
-  NETWORK, 
-  APTOS_API_KEY,
-  LENDING_ADDRESS,
-  APEX_TOKEN_ADDRESS
-} from "@/constants";
+import { CUSTOM_TESTNET_RPC, DEFAULT_TESTNET_RPC } from "@/constants";
 
 interface TestResult {
+  test: string;
   success: boolean;
   data?: any;
   error?: string;
-  timestamp: string;
+  timestamp: Date;
 }
 
 interface TestResults {
@@ -25,160 +20,224 @@ export function NetworkTest() {
   const [testResults, setTestResults] = useState<TestResults>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const testTotalCollateral = async () => {
+  const addTestResult = (test: string, success: boolean, data?: any, error?: string) => {
+    setTestResults(prev => ({
+      ...prev,
+      [test]: {
+        test,
+        success,
+        data,
+        error,
+        timestamp: new Date()
+      }
+    }));
+  };
+
+  const testUsdtToken = async () => {
     setIsLoading(true);
     try {
+      console.log("🧪 Testing USDT token fetch from Aptos testnet...");
+      
       const client = aptosClient();
-      const payload = {
-        function: `${LENDING_ADDRESS}::get_total_collateral`,
-        type_arguments: [],
-        arguments: []
-      };
       
-      console.log("Testing total collateral with payload:", payload);
+      // USDT token address on Aptos testnet
+      const usdtAddress = "0x5e156f1207d0ebfa19a9eeff00d62a282278fb8719f4fab3a586a0a2c0fffbea::coin::T";
       
-      // @ts-ignore - SDK type issues
-      const response = await client.view({ payload });
+      // Try to fetch USDT token info
+      const usdtInfo = await client.getAccountResource({
+        accountAddress: "0x5e156f1207d0ebfa19a9eeff00d62a282278fb8719f4fab3a586a0a2c0fffbea",
+        resourceType: "0x1::coin::CoinInfo<0x5e156f1207d0ebfa19a9eeff00d62a282278fb8719f4fab3a586a0a2c0fffbea::coin::T>"
+      });
+
+      console.log("✅ USDT token info fetched successfully:", usdtInfo);
       
-      console.log("Total collateral response:", response);
+      addTestResult("USDT Token Info", true, {
+        address: usdtAddress,
+        name: usdtInfo.data?.name || "Unknown",
+        symbol: usdtInfo.data?.symbol || "Unknown",
+        decimals: usdtInfo.data?.decimals || "Unknown",
+        supply: usdtInfo.data?.supply?.vec?.[0]?.integer?.vec?.[0]?.value || "Unknown"
+      });
       
-      setTestResults((prev: TestResults) => ({
-        ...prev,
-        totalCollateral: {
-          success: true,
-          data: response,
-          timestamp: new Date().toISOString()
-        }
-      }));
     } catch (error) {
-      console.error("Total collateral test error:", error);
-      setTestResults((prev: TestResults) => ({
-        ...prev,
-        totalCollateral: {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: new Date().toISOString()
-        }
-      }));
+      console.error("❌ USDT token test failed:", error);
+      addTestResult("USDT Token Info", false, undefined, error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const testApexSupply = async () => {
+  const testLedgerInfo = async () => {
     setIsLoading(true);
     try {
+      console.log("🧪 Testing ledger info fetch...");
+      
       const client = aptosClient();
-      const payload = {
-        function: `${APEX_TOKEN_ADDRESS}::get_supply`,
-        type_arguments: [],
-        arguments: []
-      };
+      const ledgerInfo = await client.getLedgerInfo();
       
-      console.log("Testing APEX supply with payload:", payload);
+      console.log("✅ Ledger info fetched successfully:", ledgerInfo);
       
-      // @ts-ignore - SDK type issues
-      const response = await client.view({ payload });
+      addTestResult("Ledger Info", true, {
+        chainId: ledgerInfo.chain_id,
+        epoch: ledgerInfo.epoch,
+        ledgerVersion: ledgerInfo.ledger_version,
+        ledgerTimestamp: ledgerInfo.ledger_timestamp,
+        nodeRole: ledgerInfo.node_role
+      });
       
-      console.log("APEX supply response:", response);
-      
-      setTestResults((prev: TestResults) => ({
-        ...prev,
-        apexSupply: {
-          success: true,
-          data: response,
-          timestamp: new Date().toISOString()
-        }
-      }));
     } catch (error) {
-      console.error("APEX supply test error:", error);
-      setTestResults((prev: TestResults) => ({
-        ...prev,
-        apexSupply: {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: new Date().toISOString()
-        }
-      }));
+      console.error("❌ Ledger info test failed:", error);
+      addTestResult("Ledger Info", false, undefined, error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const testRpcEndpoints = async () => {
+    setIsLoading(true);
+    try {
+      console.log("🧪 Testing RPC endpoints...");
+      
+      const results = {
+        custom: false,
+        default: false
+      };
+
+      // Test custom RPC
+      try {
+        const customResponse = await fetch(CUSTOM_TESTNET_RPC, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        results.custom = customResponse.ok;
+        console.log("✅ Custom RPC test:", results.custom);
+      } catch (error) {
+        console.error("❌ Custom RPC test failed:", error);
+      }
+
+      // Test default RPC
+      try {
+        const defaultResponse = await fetch(DEFAULT_TESTNET_RPC, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        results.default = defaultResponse.ok;
+        console.log("✅ Default RPC test:", results.default);
+      } catch (error) {
+        console.error("❌ Default RPC test failed:", error);
+      }
+
+      addTestResult("RPC Endpoints", results.custom || results.default, {
+        customRpc: results.custom ? "✅ Working" : "❌ Failed",
+        defaultRpc: results.default ? "✅ Working" : "❌ Failed"
+      });
+      
+    } catch (error) {
+      console.error("❌ RPC endpoints test failed:", error);
+      addTestResult("RPC Endpoints", false, undefined, error instanceof Error ? error.message : "Unknown error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearResults = () => {
+    setTestResults({});
   };
 
   return (
-    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+    <Card className="glass-effect">
       <CardHeader>
-        <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">
-          Network & Contract Tests
+        <CardTitle className="flex items-center gap-2">
+          <span>🌐</span>
+          Network Connectivity Test
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Test Aptos testnet connectivity and fetch USDT token details
+        </p>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Configuration Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Network</p>
-            <Badge variant="outline">{NETWORK}</Badge>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm text-slate-600 dark:text-slate-400">API Key</p>
-            <Badge variant="outline">
-              {APTOS_API_KEY ? "Configured" : "Not Set"}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Client Config */}
-        <div className="space-y-2">
-          <p className="text-sm text-slate-600 dark:text-slate-400">Client Configuration</p>
-          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
-            <pre className="text-xs text-slate-600 dark:text-slate-400">
-              {JSON.stringify(aptosClient().config, null, 2)}
-            </pre>
+        <div className="bg-muted/50 p-3 rounded-lg">
+          <h4 className="font-medium mb-2">Current Configuration</h4>
+          <div className="text-sm space-y-1">
+            <div>Custom RPC: {CUSTOM_TESTNET_RPC}</div>
+            <div>Default RPC: {DEFAULT_TESTNET_RPC}</div>
+            <div>Network: testnet</div>
           </div>
         </div>
 
         {/* Test Buttons */}
-        <div className="flex gap-4">
+        <div className="flex gap-2 flex-wrap">
           <Button 
-            onClick={testTotalCollateral}
+            onClick={testRpcEndpoints} 
             disabled={isLoading}
             variant="outline"
+            size="sm"
           >
-            Test Total Collateral
+            🌐 Test RPC Endpoints
           </Button>
           <Button 
-            onClick={testApexSupply}
+            onClick={testLedgerInfo} 
             disabled={isLoading}
             variant="outline"
+            size="sm"
           >
-            Test APEX Supply
+            📊 Test Ledger Info
+          </Button>
+          <Button 
+            onClick={testUsdtToken} 
+            disabled={isLoading}
+            variant="outline"
+            size="sm"
+          >
+            💰 Test USDT Token
+          </Button>
+          <Button 
+            onClick={clearResults} 
+            variant="outline"
+            size="sm"
+          >
+            🗑️ Clear Results
           </Button>
         </div>
 
         {/* Test Results */}
         {Object.keys(testResults).length > 0 && (
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Test Results</h4>
-            {Object.entries(testResults).map(([testName, result]: [string, TestResult]) => (
-              <div key={testName} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant={result.success ? "default" : "destructive"}>
-                    {result.success ? "✅ Success" : "❌ Failed"}
-                  </Badge>
-                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                    {testName}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    {new Date(result.timestamp).toLocaleTimeString()}
+          <div className="space-y-3">
+            <h4 className="font-medium">Test Results</h4>
+            {Object.values(testResults).map((result, index) => (
+              <div 
+                key={index} 
+                className={`p-3 rounded-lg border ${
+                  result.success 
+                    ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
+                    : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">{result.test}</span>
+                  <span className={`text-sm ${
+                    result.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {result.success ? '✅ Success' : '❌ Failed'}
                   </span>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
-                  <pre className="text-xs text-slate-600 dark:text-slate-400">
-                    {result.success 
-                      ? JSON.stringify(result.data, null, 2)
-                      : result.error
-                    }
-                  </pre>
+                {result.success && result.data && (
+                  <div className="text-sm space-y-1">
+                    {Object.entries(result.data).map(([key, value]) => (
+                      <div key={key}>
+                        <span className="font-medium">{key}:</span> {String(value)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!result.success && result.error && (
+                  <div className="text-sm text-red-600 dark:text-red-400">
+                    Error: {result.error}
+                  </div>
+                )}
+                <div className="text-xs text-muted-foreground mt-2">
+                  {result.timestamp.toLocaleTimeString()}
                 </div>
               </div>
             ))}

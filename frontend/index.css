@@ -23,7 +23,7 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
+    --radius: 0.5rem;
   }
 
   .dark {
@@ -56,30 +56,7 @@
   
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-    font-size: 16px;
-    line-height: 1.6;
-  }
-
-  /* Bigger fonts for better readability */
-  h1 {
-    @apply text-4xl md:text-5xl font-bold;
-  }
-
-  h2 {
-    @apply text-3xl md:text-4xl font-bold;
-  }
-
-  h3 {
-    @apply text-2xl md:text-3xl font-semibold;
-  }
-
-  h4 {
-    @apply text-xl md:text-2xl font-semibold;
-  }
-
-  p {
-    @apply text-base md:text-lg;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   /* Custom scrollbar */
@@ -88,35 +65,39 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-slate-100 dark:bg-slate-800;
+    @apply bg-muted;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 dark:bg-slate-600 rounded-full;
+    @apply bg-muted-foreground/30 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-400 dark:bg-slate-500;
+    @apply bg-muted-foreground/50;
   }
 }
 
 @layer components {
-  /* Custom button styles */
-  .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200;
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:scale-[1.02];
   }
 
-  .btn-secondary {
-    @apply bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-3 px-6 rounded-lg transition-colors duration-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200;
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
   }
 
-  /* Card styles */
-  .card-modern {
-    @apply bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg dark:bg-slate-800/80 dark:border-slate-700;
+  .glass-effect {
+    @apply bg-background/80 backdrop-blur-sm border border-border/50;
+  }
+}
+
+/* Animation utilities */
+@layer utilities {
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  /* Input styles */
-  .input-modern {
-    @apply bg-white border border-slate-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200;
+  .animate-bounce-slow {
+    animation: bounce 2s infinite;
   }
 }

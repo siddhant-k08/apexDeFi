@@ -3,241 +3,160 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/components/ui/use-toast";
 import { useContractService } from "@/hooks/useContractService";
-import { 
-  COLLATERAL_RATIO, 
-  DEFAULT_APT_PRICE, 
-  DEFAULT_APEX_PRICE,
-  OCTAS_PER_TOKEN 
-} from "@/constants";
+import { useToast } from "@/components/ui/use-toast";
+import { DEFAULT_APT_PRICE, DEFAULT_APEX_PRICE } from "@/constants";
 
 export function BorrowManager() {
+  const { borrowApex, repayApex, isLoading, userPosition, tokenBalances } = useContractService();
   const { toast } = useToast();
-  const { borrowApex, repayApex, isLoading, protocolStats, userPosition, tokenBalances } = useContractService();
   const [amount, setAmount] = useState("");
 
-  // Calculate borrowing capacity
-  const collateralValue = userPosition?.collateralAmount ? (userPosition.collateralAmount / OCTAS_PER_TOKEN) * (protocolStats?.aptPrice || DEFAULT_APT_PRICE) : 0;
-  const maxBorrowableValue = collateralValue / COLLATERAL_RATIO; // 120% collateral ratio
-  const currentDebtValue = userPosition?.borrowedAmount ? (userPosition.borrowedAmount / OCTAS_PER_TOKEN) * (protocolStats?.apexPrice || DEFAULT_APEX_PRICE) : 0;
-  const availableToBorrow = Math.max(0, maxBorrowableValue - currentDebtValue);
-  const availableToBorrowApex = availableToBorrow / (protocolStats?.apexPrice || DEFAULT_APEX_PRICE);
-  const utilizationPercentage = maxBorrowableValue > 0 ? (currentDebtValue / maxBorrowableValue) * 100 : 0;
+  // Calculate borrowing capacity based on collateral
+  const collateralValue = (userPosition?.collateral || 0) * DEFAULT_APT_PRICE;
+  const borrowedValue = (userPosition?.borrowed || 0) * DEFAULT_APEX_PRICE;
+  const availableToBorrowValue = Math.max(0, collateralValue / 1.2 - borrowedValue); // 120% collateralization ratio
+  const availableToBorrowApex = availableToBorrowValue / DEFAULT_APEX_PRICE;
 
-  const handleBorrowApex = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
+  const handleBorrow = async () => {
+    const numAmount = parseFloat(amount);
+    if (!amount || numAmount <= 0) {
       toast({
         title: "Invalid Amount",
-        description: "Please enter a valid amount.",
+        description: "Please enter a valid amount greater than 0.",
         variant: "destructive",
       });
       return;
     }
-
-    if (parseFloat(amount) > availableToBorrowApex) {
+    if (numAmount > availableToBorrowApex) {
       toast({
-        title: "Exceeds Borrowing Capacity",
-        description: "Amount exceeds your available borrowing capacity.",
+        title: "Insufficient Collateral",
+        description: `You can only borrow up to ${availableToBorrowApex.toFixed(4)} APEX with your current collateral.`,
         variant: "destructive",
       });
       return;
     }
-
-    try {
-      toast({
-        title: "Borrowing APEX",
-        description: "Transaction submitted. Please wait for confirmation...",
-        variant: "default",
-      });
-      
-      const txHash = await borrowApex(parseFloat(amount));
-      
-      toast({
-        title: "APEX Borrowed Successfully!",
-        description: `Borrowed ${amount} APEX. Transaction: ${txHash.slice(0, 8)}...`,
-        variant: "default",
-      });
-      
-      setAmount("");
-    } catch (error) {
-      toast({
-        title: "Transaction Failed",
-        description: "Failed to borrow APEX. Please try again.",
-        variant: "destructive",
-      });
-    }
+    await borrowApex(numAmount);
+    setAmount("");
   };
 
-  const handleRepayApex = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
+  const handleRepay = async () => {
+    const numAmount = parseFloat(amount);
+    if (!amount || numAmount <= 0) {
       toast({
         title: "Invalid Amount",
-        description: "Please enter a valid amount.",
+        description: "Please enter a valid amount greater than 0.",
         variant: "destructive",
       });
       return;
     }
-
-    if (parseFloat(amount) > tokenBalances.apex) {
+    if (numAmount > tokenBalances.apex) {
       toast({
         title: "Insufficient Balance",
-        description: "You don't have enough APEX tokens.",
+        description: `You only have ${tokenBalances.apex.toFixed(4)} APEX available.`,
         variant: "destructive",
       });
       return;
     }
-
-    try {
-      const txHash = await repayApex(parseFloat(amount));
-      
-      toast({
-        title: "APEX Repaid Successfully!",
-        description: `Repaid ${amount} APEX. Transaction: ${txHash.slice(0, 8)}...`,
-        variant: "default",
-      });
-      
-      setAmount("");
-    } catch (error) {
-      toast({
-        title: "Transaction Failed",
-        description: "Failed to repay APEX. Please try again.",
-        variant: "destructive",
-      });
-    }
+    await repayApex(numAmount);
+    setAmount("");
   };
 
   const setMaxBorrow = () => {
-    setAmount(availableToBorrowApex.toString());
+    setAmount(availableToBorrowApex.toFixed(4));
   };
 
   const setMaxRepay = () => {
-    setAmount(tokenBalances.apex.toString());
+    const maxRepay = Math.min(tokenBalances.apex, userPosition?.borrowed || 0);
+    setAmount(maxRepay.toFixed(4));
   };
 
   return (
-    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+    <Card className="bg-card/50 dark:bg-slate-800/80 border-border/50">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          Borrow & Repay
-        </CardTitle>
+        <CardTitle className="text-foreground">Borrow & Repay</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Borrowing Capacity */}
-        <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200 dark:from-green-950/20 dark:to-blue-950/20 dark:border-green-800">
-          <CardContent className="p-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Borrowing Capacity</span>
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                  {utilizationPercentage.toFixed(1)}% Used
-                </span>
+        <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+          <div className="text-center">
+            <div className="text-sm text-green-600 dark:text-green-400">Available to Borrow</div>
+            <div className="text-lg font-bold text-green-700 dark:text-green-300">
+              {availableToBorrowApex.toFixed(4)} APEX
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              ≈ ${availableToBorrowValue.toFixed(2)} USD
+            </div>
+          </div>
+        </div>
+
+        {/* Current Debt */}
+        {userPosition && userPosition.borrowed > 0 && (
+          <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
+            <div className="text-center">
+              <div className="text-sm text-red-600 dark:text-red-400">Current Debt</div>
+              <div className="text-lg font-bold text-red-700 dark:text-red-300">
+                {userPosition.borrowed.toFixed(4)} APEX
               </div>
-              <Progress value={utilizationPercentage} className="h-2" />
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Available to Borrow</p>
-                  <p className="text-xl font-bold text-green-600">
-                    {availableToBorrowApex.toFixed(2)} APEX
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    ≈ ${availableToBorrow.toFixed(2)} USD
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Current Debt</p>
-                  <p className="text-xl font-bold text-red-600">
-                    {userPosition?.borrowedAmount ? (userPosition.borrowedAmount / OCTAS_PER_TOKEN).toFixed(2) : "0.00"} APEX
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    ≈ ${currentDebtValue.toFixed(2)} USD
-                  </p>
-                </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                ≈ ${borrowedValue.toFixed(2)} USD
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
-        {/* Borrow APEX */}
+        {/* Input Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Borrow APEX</h3>
-          <div className="space-y-3">
-            <Label htmlFor="borrow-amount" className="text-base font-medium">
-              Amount (APEX)
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="borrow-amount" className="text-foreground">APEX Amount</Label>
             <div className="flex gap-2">
               <Input
                 id="borrow-amount"
                 type="number"
-                placeholder="0.00"
+                placeholder="0.0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="text-lg"
+                className="flex-1"
               />
-              <Button
-                variant="outline"
-                onClick={setMaxBorrow}
-                className="px-4"
-              >
-                MAX
-              </Button>
             </div>
-            <Button 
-              onClick={handleBorrowApex}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={handleBorrow}
               disabled={!amount || parseFloat(amount) <= 0 || isLoading || availableToBorrowApex <= 0}
               className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-3"
             >
               {isLoading ? "Borrowing..." : "Borrow APEX"}
             </Button>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">Repay APEX</h3>
-          <div className="space-y-3">
-            <Label htmlFor="repay-amount" className="text-base font-medium">
-              Amount (APEX)
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="repay-amount"
-                type="number"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="text-lg"
-              />
-              <Button
-                variant="outline"
-                onClick={setMaxRepay}
-                className="px-4"
-              >
-                MAX
-              </Button>
-            </div>
-            <Button 
-              onClick={handleRepayApex}
+            <Button
+              onClick={handleRepay}
               disabled={!amount || parseFloat(amount) <= 0 || isLoading}
               variant="outline"
-              className="w-full text-lg py-3 border-red-300 text-red-700 hover:bg-red-50"
+              className="w-full text-lg py-3 border-red-300 text-red-700 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/20"
             >
               {isLoading ? "Repaying..." : "Repay APEX"}
             </Button>
           </div>
+
+          {/* Max Buttons */}
+          <div className="flex gap-2">
+            <Button onClick={setMaxBorrow} variant="outline" size="sm" className="flex-1">
+              Max Borrow
+            </Button>
+            <Button onClick={setMaxRepay} variant="outline" size="sm" className="flex-1">
+              Max Repay
+            </Button>
+          </div>
         </div>
 
-        {/* Warning */}
-        {availableToBorrowApex <= 0 && (
-          <Card className="bg-yellow-50/50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800">
-            <CardContent className="p-3">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                ⚠️ You need to add more collateral to borrow APEX tokens.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Info Section */}
+        <div className="p-3 bg-muted/50 dark:bg-slate-700/50 rounded-lg">
+          <p className="text-sm text-muted-foreground">
+            💡 Borrow APEX tokens against your collateral. You must maintain a 120% collateralization ratio to avoid liquidation.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

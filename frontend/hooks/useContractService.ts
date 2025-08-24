@@ -1,52 +1,24 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { useWalletClient } from "@thalalabs/surf/hooks";
-import { contractService, UserPosition, ProtocolStats } from "@/lib/contractService";
 import { transactionService } from "@/lib/transactionService";
 import { balanceService, TokenBalance } from "@/lib/balanceService";
+import { useContractService as useContractServiceBase } from "@/lib/contractService";
+import { useToast } from "@/components/ui/use-toast";
 
-export function useContractService() {
-  const { account, connected } = useWallet();
-  const { client: walletClient } = useWalletClient();
-  const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
-  const [protocolStats, setProtocolStats] = useState<ProtocolStats | null>(null);
-  const [tokenBalances, setTokenBalances] = useState<TokenBalance>({ apt: 0, apex: 0 });
+export const useContractService = () => {
+  const { account } = useWallet();
+  const walletClient = useWalletClient();
+  const { toast } = useToast();
+  const contractService = useContractServiceBase();
+
+  // State
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch user position
-  const fetchUserPosition = async () => {
-    if (!account?.address) return;
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log("Fetching position for account:", account.address.toString());
-      const position = await contractService.getUserPosition(account.address.toString());
-      console.log("Fetched position:", position);
-      setUserPosition(position);
-    } catch (err) {
-      console.error("Error fetching user position:", err);
-      setError("Failed to fetch user position");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch protocol stats
-  const fetchProtocolStats = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const stats = await contractService.getProtocolStats();
-      setProtocolStats(stats);
-    } catch (err) {
-      console.error("Error fetching protocol stats:", err);
-      setError("Failed to fetch protocol stats");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [userPosition, setUserPosition] = useState<any>(null);
+  const [protocolStats, setProtocolStats] = useState<any>(null);
+  const [dexReserves, setDexReserves] = useState<any>(null);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalance>({ apt: 0, apex: 0 });
 
   // Fetch token balances
   const fetchTokenBalances = async () => {
@@ -77,224 +49,213 @@ export function useContractService() {
     }
   };
 
-  // Refresh all data
-  const refreshData = async () => {
+  // Fetch user position
+  const fetchUserPosition = async () => {
+    if (!account?.address) return;
+    
     try {
-      setIsLoading(true);
-      
-      // Clear balance cache to ensure fresh data
-      if (account?.address) {
-        balanceService.clearCache(account.address.toString());
-      }
-      
-      // Add a small delay to ensure blockchain state is updated
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await Promise.all([
-        fetchUserPosition(),
-        fetchProtocolStats(),
-        fetchTokenBalances()
-      ]);
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-    } finally {
-      setIsLoading(false);
+      const position = await contractService.getUserPosition(account.address.toString());
+      setUserPosition(position);
+    } catch (err) {
+      console.error("❌ Error fetching user position:", err);
     }
   };
 
-  // Transaction functions
-  const addCollateral = async (amount: number) => {
-    if (!account?.address || !walletClient) throw new Error("Wallet not connected");
+  // Fetch protocol stats
+  const fetchProtocolStats = async () => {
+    try {
+      const stats = await contractService.getProtocolStats();
+      setProtocolStats(stats);
+    } catch (err) {
+      console.error("❌ Error fetching protocol stats:", err);
+    }
+  };
+
+  // Fetch DEX reserves
+  const fetchDexReserves = async () => {
+    try {
+      const reserves = await contractService.getDexReserves();
+      setDexReserves(reserves);
+    } catch (err) {
+      console.error("❌ Error fetching DEX reserves:", err);
+    }
+  };
+
+  // Refresh all data
+  const refreshData = useCallback(async () => {
+    if (!account?.address) return;
+    
+    setIsLoading(true);
+    setError(null);
     
     try {
-      setIsLoading(true);
-      setError(null);
-      const txHash = await transactionService.addCollateral(walletClient, amount);
-      await refreshData(); // Refresh data after transaction
-      return txHash;
+      // Clear balance cache before fetching
+      balanceService.clearCache(account.address.toString());
+      
+      // Fetch all data in parallel
+      await Promise.all([
+        fetchTokenBalances(),
+        fetchUserPosition(),
+        fetchProtocolStats(),
+        fetchDexReserves()
+      ]);
     } catch (err) {
-      console.error("Error adding collateral:", err);
-      setError("Failed to add collateral");
-      throw err;
+      console.error("❌ Error refreshing data:", err);
+      setError("Failed to refresh data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [account?.address]);
+
+  // Auto-refresh data every 30 seconds
+  useEffect(() => {
+    if (!account?.address) return;
+    
+    refreshData();
+    
+    const interval = setInterval(refreshData, 30000);
+    return () => clearInterval(interval);
+  }, [account?.address, refreshData]);
+
+  // Transaction functions
+  const addCollateral = async (amount: number) => {
+    if (!walletClient || !account?.address) {
+      toast({
+        title: "Error",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const hash = await transactionService.addCollateral(walletClient, amount);
+      toast({
+        title: "Success",
+        description: `Added ${amount} APT as collateral. Transaction: ${hash.slice(0, 8)}...`,
+        variant: "default",
+      });
+      await refreshData();
+    } catch (error) {
+      console.error("❌ Error adding collateral:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add collateral",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const withdrawCollateral = async (amount: number) => {
-    if (!account?.address || !walletClient) throw new Error("Wallet not connected");
-    
+    if (!walletClient || !account?.address) {
+      toast({
+        title: "Error",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      const txHash = await transactionService.withdrawCollateral(walletClient, amount);
-      await refreshData(); // Refresh data after transaction
-      return txHash;
-    } catch (err) {
-      console.error("Error withdrawing collateral:", err);
-      setError("Failed to withdraw collateral");
-      throw err;
+      const hash = await transactionService.withdrawCollateral(walletClient, amount);
+      toast({
+        title: "Success",
+        description: `Withdrew ${amount} APT collateral. Transaction: ${hash.slice(0, 8)}...`,
+        variant: "default",
+      });
+      await refreshData();
+    } catch (error) {
+      console.error("❌ Error withdrawing collateral:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to withdraw collateral",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const borrowApex = async (amount: number) => {
-    if (!account?.address || !walletClient) throw new Error("Wallet not connected");
-    
+    if (!walletClient || !account?.address) {
+      toast({
+        title: "Error",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      const txHash = await transactionService.borrowApex(walletClient, amount);
-      await refreshData(); // Refresh data after transaction
-      return txHash;
-    } catch (err) {
-      console.error("Error borrowing APEX:", err);
-      setError("Failed to borrow APEX");
-      throw err;
+      const hash = await transactionService.borrowApex(walletClient, amount);
+      toast({
+        title: "Success",
+        description: `Borrowed ${amount} APEX. Transaction: ${hash.slice(0, 8)}...`,
+        variant: "default",
+      });
+      await refreshData();
+    } catch (error) {
+      console.error("❌ Error borrowing APEX:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to borrow APEX",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const repayApex = async (amount: number) => {
-    if (!account?.address || !walletClient) throw new Error("Wallet not connected");
-    
+    if (!walletClient || !account?.address) {
+      toast({
+        title: "Error",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      const txHash = await transactionService.repayApex(walletClient, amount);
-      await refreshData(); // Refresh data after transaction
-      return txHash;
-    } catch (err) {
-      console.error("Error repaying APEX:", err);
-      setError("Failed to repay APEX");
-      throw err;
+      const hash = await transactionService.repayApex(walletClient, amount);
+      toast({
+        title: "Success",
+        description: `Repaid ${amount} APEX. Transaction: ${hash.slice(0, 8)}...`,
+        variant: "default",
+      });
+      await refreshData();
+    } catch (error) {
+      console.error("❌ Error repaying APEX:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to repay APEX",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const repayInterest = async () => {
-    if (!account?.address || !walletClient) throw new Error("Wallet not connected");
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      const txHash = await transactionService.repayInterest(walletClient);
-      await refreshData(); // Refresh data after transaction
-      return txHash;
-    } catch (err) {
-      console.error("Error repaying interest:", err);
-      setError("Failed to repay interest");
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Auto-refresh data when wallet connects/disconnects
-  useEffect(() => {
-    if (connected && account?.address) {
-      refreshData();
-      
-      // Set up auto-refresh every 30 seconds
-      const interval = setInterval(refreshData, 30000);
-      return () => clearInterval(interval);
-    } else {
-      setUserPosition(null);
-      setProtocolStats(null);
-    }
-  }, [connected, account?.address]);
 
   return {
-    // Data
-    userPosition,
-    protocolStats,
-    tokenBalances,
+    // State
     isLoading,
     error,
+    userPosition,
+    protocolStats,
+    dexReserves,
+    tokenBalances,
     
-    // Actions
+    // Functions
     refreshData,
     addCollateral,
     withdrawCollateral,
     borrowApex,
     repayApex,
-    repayInterest,
-    
-    // DEX Actions
-    swapAptToApex: async (amount: number) => {
-      if (!account?.address || !walletClient) throw new Error("Wallet not connected");
-      try {
-        setIsLoading(true);
-        setError(null);
-        const txHash = await transactionService.swapAptToApex(walletClient, amount);
-        await refreshData();
-        return txHash;
-      } catch (err) {
-        console.error("Error swapping APT to APEX:", err);
-        setError("Failed to swap APT to APEX");
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    
-    swapApexToApt: async (amount: number) => {
-      if (!account?.address || !walletClient) throw new Error("Wallet not connected");
-      try {
-        setIsLoading(true);
-        setError(null);
-        const txHash = await transactionService.swapApexToApt(walletClient, amount);
-        await refreshData();
-        return txHash;
-      } catch (err) {
-        console.error("Error swapping APEX to APT:", err);
-        setError("Failed to swap APEX to APT");
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    
-    // Liquidation
-    liquidate: async (userAddress: string) => {
-      if (!account?.address || !walletClient) throw new Error("Wallet not connected");
-      try {
-        setIsLoading(true);
-        setError(null);
-        const txHash = await transactionService.liquidate(walletClient, userAddress);
-        await refreshData();
-        return txHash;
-      } catch (err) {
-        console.error("Error liquidating position:", err);
-        setError("Failed to liquidate position");
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    
-    // Liquidity Management
-    addLiquidity: async (aptAmount: number, apexAmount: number) => {
-      if (!account?.address || !walletClient) throw new Error("Wallet not connected");
-      try {
-        setIsLoading(true);
-        setError(null);
-        const txHash = await transactionService.addLiquidity(walletClient, aptAmount, apexAmount);
-        await refreshData();
-        return txHash;
-      } catch (err) {
-        console.error("Error adding liquidity:", err);
-        setError("Failed to add liquidity");
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    
-    // Utility
-    isConnected: connected,
-    userAddress: account?.address
   };
-} 
+}; 

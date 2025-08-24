@@ -1,24 +1,12 @@
 import { aptosClient } from "@/utils/aptosClient";
-import { priceService } from "./priceService";
-import { 
-  NETWORK, 
-  APEX_TOKEN_ADDRESS, 
-  APEX_DEX_ADDRESS, 
+import { priceService } from "@/lib/priceService";
+import {
   LENDING_ADDRESS,
+  APEX_DEX_ADDRESS,
   OCTAS_PER_TOKEN,
   DEFAULT_APT_PRICE,
   DEFAULT_APEX_PRICE
 } from "@/constants";
-
-console.log("ContractService initialized with network:", NETWORK);
-console.log("Contract addresses:", { LENDING_ADDRESS, APEX_DEX_ADDRESS, APEX_TOKEN_ADDRESS });
-
-export interface UserPosition {
-  collateralAmount: number;
-  borrowedAmount: number;
-  interestAccrued: number;
-  lastUpdated: number;
-}
 
 export interface ProtocolStats {
   totalCollateral: number;
@@ -26,271 +14,193 @@ export interface ProtocolStats {
   protocolFees: number;
   aptPrice: number;
   apexPrice: number;
-  utilizationRate: number;
 }
 
-export class ContractService {
-  private client: ReturnType<typeof aptosClient>;
+export interface UserPosition {
+  collateral: number;
+  borrowed: number;
+  interestAccrued: number;
+  collateralValue: number;
+  debtValue: number;
+  collateralRatio: number;
+  utilizationPercentage: number;
+}
 
-  constructor() {
-    this.client = aptosClient();
-    console.log("ContractService client initialized:", this.client);
-    console.log("Client config:", this.client.config);
-  }
+export interface DexReserves {
+  aptReserves: number;
+  apexReserves: number;
+  exchangeRate: number;
+}
 
-  // APEX Token Functions
-  async getApexSupply(): Promise<number> {
+export const useContractService = () => {
+  const client = aptosClient();
+
+  // Fetch protocol statistics
+  const getProtocolStats = async (): Promise<ProtocolStats> => {
     try {
-      const payload = {
-        function: `${APEX_TOKEN_ADDRESS}::get_supply`,
-        type_arguments: [],
-        arguments: []
-      };
+      console.log("📊 Fetching protocol stats...");
       
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      return Number(response[0]) / OCTAS_PER_TOKEN; // Convert from octas
-    } catch (error) {
-      console.error("Error fetching APEX supply:", error);
-      return 0;
-    }
-  }
+      // Get live prices
+      const livePrices = await priceService.getLivePrices(10.0); // Default exchange rate
+      const aptPrice = livePrices.apt || DEFAULT_APT_PRICE;
+      const apexPrice = livePrices.apex || DEFAULT_APEX_PRICE;
 
-  async getApexMaxSupply(): Promise<number> {
-    try {
-      const payload = {
-        function: `${APEX_TOKEN_ADDRESS}::get_max_supply`,
-        type_arguments: [],
-        arguments: []
-      };
-      
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      return Number(response[0]) / OCTAS_PER_TOKEN;
-    } catch (error) {
-      console.error("Error fetching APEX max supply:", error);
-      return 0;
-    }
-  }
-
-  // Lending Protocol Functions
-  async getUserPosition(userAddress: string): Promise<UserPosition | null> {
-    try {
-      const payload = {
-        function: `${LENDING_ADDRESS}::get_user_position`,
-        type_arguments: [],
-        arguments: [userAddress]
-      };
-      
-      console.log("Fetching user position for:", userAddress);
-      console.log("Payload:", payload);
-      
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      
-      console.log("User position response:", response);
-      
-      if (response && response.length >= 4) {
-        const position = {
-          collateralAmount: Number(response[0]) / OCTAS_PER_TOKEN, // APT
-          borrowedAmount: Number(response[1]) / OCTAS_PER_TOKEN, // APEX
-          interestAccrued: Number(response[2]) / OCTAS_PER_TOKEN, // APEX
-          lastUpdated: Number(response[3]) * 1000 // Convert to milliseconds
-        };
-        console.log("Parsed user position:", position);
-        return position;
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching user position:", error);
-      return null;
-    }
-  }
-
-  async getTotalCollateral(): Promise<number> {
-    try {
-      const payload = {
-        function: `${LENDING_ADDRESS}::get_total_collateral`,
-        type_arguments: [],
-        arguments: []
-      };
-      
-      console.log("Fetching total collateral");
-      console.log("Payload:", payload);
-      
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      
-      console.log("Total collateral response:", response);
-      
-      if (response && response.length > 0) {
-        const totalCollateral = Number(response[0]) / OCTAS_PER_TOKEN;
-        console.log("Total collateral:", totalCollateral);
-        return totalCollateral;
-      }
-      return 0;
-    } catch (error) {
-      console.error("Error fetching total collateral:", error);
-      return 0;
-    }
-  }
-
-  async getTotalBorrowed(): Promise<number> {
-    try {
-      const payload = {
-        function: `${LENDING_ADDRESS}::get_total_borrowed`,
-        type_arguments: [],
-        arguments: []
-      };
-      
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      
-      if (response && response.length > 0) {
-        return Number(response[0]) / OCTAS_PER_TOKEN;
-      }
-      return 0;
-    } catch (error) {
-      console.error("Error fetching total borrowed:", error);
-      return 0;
-    }
-  }
-
-  async getProtocolFees(): Promise<number> {
-    try {
-      const payload = {
-        function: `${LENDING_ADDRESS}::get_protocol_fees`,
-        type_arguments: [],
-        arguments: []
-      };
-      
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      
-      if (response && response.length > 0) {
-        return Number(response[0]) / OCTAS_PER_TOKEN;
-      }
-      return 0;
-    } catch (error) {
-      console.error("Error fetching protocol fees:", error);
-      return 0;
-    }
-  }
-
-  // DEX Functions
-  async getDexReserves(): Promise<{ apt: number; apex: number }> {
-    try {
-      const payload = {
-        function: `${APEX_DEX_ADDRESS}::get_reserves`,
-        type_arguments: [],
-        arguments: []
-      };
-      
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      
-      if (response && response.length >= 2) {
-        return {
-          apt: Number(response[0]) / OCTAS_PER_TOKEN,
-          apex: Number(response[1]) / OCTAS_PER_TOKEN
-        };
-      }
-      return { apt: 0, apex: 0 };
-    } catch (error) {
-      console.error("Error fetching DEX reserves:", error);
-      return { apt: 0, apex: 0 };
-    }
-  }
-
-  async getAptPrice(): Promise<number> {
-    try {
-      // First try to get the price from DEX
-      const payload = {
-        function: `${APEX_DEX_ADDRESS}::get_apt_price`,
-        type_arguments: [],
-        arguments: []
-      };
-      
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      
-      if (response && response.length > 0) {
-        const apexPerApt = Number(response[0]);
-        // Use the price service to get live USD price
-        const livePrices = await priceService.getLivePrices(apexPerApt);
-        return livePrices.apt;
-      }
-      
-      // Fallback to default price
-      return DEFAULT_APT_PRICE;
-    } catch (error) {
-      console.error("Error fetching APT price:", error);
-      return DEFAULT_APT_PRICE;
-    }
-  }
-
-  async getApexPrice(): Promise<number> {
-    try {
-      // Get APT price first
-      const aptPrice = await this.getAptPrice();
-      
-      // Get DEX ratio
-      const payload = {
-        function: `${APEX_DEX_ADDRESS}::get_apt_price`,
-        type_arguments: [],
-        arguments: []
-      };
-      
-      // @ts-ignore - SDK type issues
-      const response = await this.client.view({ payload });
-      
-      if (response && response.length > 0) {
-        const apexPerApt = Number(response[0]);
-        // Calculate APEX price based on APT price and DEX ratio
-        return aptPrice / apexPerApt;
-      }
-      
-      // Fallback to default price
-      return DEFAULT_APEX_PRICE;
-    } catch (error) {
-      console.error("Error fetching APEX price:", error);
-      return DEFAULT_APEX_PRICE;
-    }
-  }
-
-  // Protocol Stats
-  async getProtocolStats(): Promise<ProtocolStats> {
-    try {
-      const [totalCollateral, totalBorrowed, protocolFees, aptPrice, apexPrice] = await Promise.all([
-        this.getTotalCollateral(),
-        this.getTotalBorrowed(),
-        this.getProtocolFees(),
-        this.getAptPrice(),
-        this.getApexPrice()
+      // Fetch protocol data
+      const [totalCollateralRes, totalBorrowedRes, protocolFeesRes] = await Promise.all([
+        client.getAccountResource({
+          accountAddress: LENDING_ADDRESS.split("::")[0],
+          resourceType: `${LENDING_ADDRESS}::Lending`
+        }).catch(() => ({ data: { total_collateral: "0" } })),
+        
+        client.getAccountResource({
+          accountAddress: LENDING_ADDRESS.split("::")[0],
+          resourceType: `${LENDING_ADDRESS}::Lending`
+        }).catch(() => ({ data: { total_borrowed: "0" } })),
+        
+        client.getAccountResource({
+          accountAddress: LENDING_ADDRESS.split("::")[0],
+          resourceType: `${LENDING_ADDRESS}::Lending`
+        }).catch(() => ({ data: { protocol_fees: "0" } }))
       ]);
 
-      const utilizationRate = totalCollateral > 0 ? (totalBorrowed / totalCollateral) * 100 : 0;
+      const totalCollateral = Number(totalCollateralRes.data?.total_collateral || "0") / OCTAS_PER_TOKEN;
+      const totalBorrowed = Number(totalBorrowedRes.data?.total_borrowed || "0") / OCTAS_PER_TOKEN;
+      const protocolFees = Number(protocolFeesRes.data?.protocol_fees || "0") / OCTAS_PER_TOKEN;
 
       return {
         totalCollateral,
         totalBorrowed,
         protocolFees,
         aptPrice,
-        apexPrice,
-        utilizationRate
+        apexPrice
       };
     } catch (error) {
-      console.error("Error fetching protocol stats:", error);
+      console.error("❌ Error fetching protocol stats:", error);
       return {
         totalCollateral: 0,
         totalBorrowed: 0,
         protocolFees: 0,
         aptPrice: DEFAULT_APT_PRICE,
-        apexPrice: DEFAULT_APEX_PRICE,
-        utilizationRate: 0
+        apexPrice: DEFAULT_APEX_PRICE
       };
     }
-  }
-}
+  };
 
-export const contractService = new ContractService(); 
+  // Fetch user position
+  const getUserPosition = async (userAddress: string): Promise<UserPosition | null> => {
+    try {
+      console.log("👤 Fetching user position for:", userAddress);
+      
+      const positionRes = await client.getAccountResource({
+        accountAddress: userAddress,
+        resourceType: `${LENDING_ADDRESS}::UserPosition`
+      });
+
+      if (!positionRes.data) {
+        console.log("⚠️ No user position found");
+        return null;
+      }
+
+      const position = positionRes.data as any;
+      const collateral = Number(position.collateral || "0") / OCTAS_PER_TOKEN;
+      const borrowed = Number(position.borrowed || "0") / OCTAS_PER_TOKEN;
+      const interestAccrued = Number(position.interest_accrued || "0") / OCTAS_PER_TOKEN;
+
+      // Get live prices
+      const livePrices = await priceService.getLivePrices(10.0); // Default exchange rate
+      const aptPrice = livePrices.apt || DEFAULT_APT_PRICE;
+      const apexPrice = livePrices.apex || DEFAULT_APEX_PRICE;
+
+      const collateralValue = collateral * aptPrice;
+      const debtValue = (borrowed + interestAccrued) * apexPrice;
+      const collateralRatio = debtValue > 0 ? (collateralValue / debtValue) * 100 : 0;
+      const utilizationPercentage = collateralValue > 0 ? (debtValue / collateralValue) * 100 : 0;
+
+      return {
+        collateral,
+        borrowed,
+        interestAccrued,
+        collateralValue,
+        debtValue,
+        collateralRatio,
+        utilizationPercentage
+      };
+    } catch (error) {
+      console.error("❌ Error fetching user position:", error);
+      return null;
+    }
+  };
+
+  // Fetch DEX reserves
+  const getDexReserves = async (): Promise<DexReserves> => {
+    try {
+      console.log("🏦 Fetching DEX reserves...");
+      
+      const dexRes = await client.getAccountResource({
+        accountAddress: APEX_DEX_ADDRESS.split("::")[0],
+        resourceType: `${APEX_DEX_ADDRESS}::ApexDEX`
+      });
+
+      if (!dexRes.data) {
+        console.log("⚠️ No DEX data found, using defaults");
+        return {
+          aptReserves: 1.0,
+          apexReserves: 10.0,
+          exchangeRate: 10.0
+        };
+      }
+
+      const dex = dexRes.data as any;
+      const aptReserves = Number(dex.apt_reserves || "0") / OCTAS_PER_TOKEN;
+      const apexReserves = Number(dex.apex_reserves || "0") / OCTAS_PER_TOKEN;
+      const exchangeRate = apexReserves > 0 ? aptReserves / apexReserves : 10.0;
+
+      return {
+        aptReserves,
+        apexReserves,
+        exchangeRate
+      };
+    } catch (error) {
+      console.error("❌ Error fetching DEX reserves:", error);
+      return {
+        aptReserves: 1.0,
+        apexReserves: 10.0,
+        exchangeRate: 10.0
+      };
+    }
+  };
+
+  // Get APT price from DEX
+  const getAptPrice = async (): Promise<number> => {
+    try {
+      const dexReserves = await getDexReserves();
+      const apexPerApt = dexReserves.exchangeRate;
+      const livePrices = await priceService.getLivePrices(apexPerApt);
+      return livePrices.apt || DEFAULT_APT_PRICE;
+    } catch (error) {
+      console.error("❌ Error getting APT price:", error);
+      return DEFAULT_APT_PRICE;
+    }
+  };
+
+  // Get APEX price from DEX
+  const getApexPrice = async (): Promise<number> => {
+    try {
+      const aptPrice = await getAptPrice();
+      const dexReserves = await getDexReserves();
+      const apexPerApt = dexReserves.exchangeRate;
+      return aptPrice / apexPerApt;
+    } catch (error) {
+      console.error("❌ Error getting APEX price:", error);
+      return DEFAULT_APEX_PRICE;
+    }
+  };
+
+  return {
+    getProtocolStats,
+    getUserPosition,
+    getDexReserves,
+    getAptPrice,
+    getApexPrice
+  };
+}; 
