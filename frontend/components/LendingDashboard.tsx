@@ -1,6 +1,5 @@
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useContractService } from "@/hooks/useContractService";
@@ -10,7 +9,7 @@ import { PositionOverview } from "./PositionOverview";
 
 export function LendingDashboard() {
   const { connected } = useWallet();
-  const { protocolStats, isLoading } = useContractService();
+  const { protocolStats } = useContractService();
 
   if (!connected) {
     return (

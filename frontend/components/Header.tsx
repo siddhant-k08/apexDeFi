@@ -1,5 +1,4 @@
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { Button } from "@/components/ui/button";
 import { WalletSelector } from "./WalletSelector";
 
 export function Header() {

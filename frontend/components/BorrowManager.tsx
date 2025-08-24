@@ -1,18 +1,15 @@
 import { useState } from "react";
-import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { useContractService } from "@/hooks/useContractService";
 
 export function BorrowManager() {
-  const { account } = useWallet();
   const { toast } = useToast();
-  const { borrowApex, repayApex, repayInterest, isLoading, protocolStats, userPosition, tokenBalances } = useContractService();
+  const { borrowApex, repayApex, isLoading, protocolStats, userPosition, tokenBalances } = useContractService();
   const [amount, setAmount] = useState("");
 
   // Calculate borrowing capacity

@@ -1,15 +1,12 @@
 import { useState } from "react";
-import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useContractService } from "@/hooks/useContractService";
 
 export function CollateralManager() {
-  const { account } = useWallet();
   const { toast } = useToast();
   const { addCollateral, withdrawCollateral, isLoading, protocolStats, userPosition, refreshData, tokenBalances } = useContractService();
   const [amount, setAmount] = useState("");
