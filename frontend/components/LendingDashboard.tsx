@@ -5,6 +5,9 @@ import { CollateralManager } from "./CollateralManager";
 import { BorrowManager } from "./BorrowManager";
 import { PositionOverview } from "./PositionOverview";
 import { ProtocolStats } from "./ProtocolStats";
+import { BorrowingInfo } from "./BorrowingInfo";
+import { DebugInfo } from "./DebugInfo";
+import { NetworkTest } from "./NetworkTest";
 
 export function LendingDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -13,6 +16,15 @@ export function LendingDashboard() {
     <div className="space-y-6">
       {/* Protocol Statistics */}
       <ProtocolStats />
+      
+      {/* Borrowing Guide */}
+      <BorrowingInfo />
+      
+      {/* Network Test */}
+      <NetworkTest />
+      
+      {/* Debug Information */}
+      <DebugInfo />
       
       {/* Position Overview */}
       <PositionOverview />

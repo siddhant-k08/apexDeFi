@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useContractService } from "@/hooks/useContractService";
+import { BorrowingCapacity } from "@/components/BorrowingCapacity";
 
 export function BorrowManager() {
   const { account } = useWallet();
@@ -17,8 +18,17 @@ export function BorrowManager() {
   const [borrowAmount, setBorrowAmount] = useState("");
   const [repayAmount, setRepayAmount] = useState("");
   
-  // Get real data from contract
-  const borrowingCapacity = userPosition ? (userPosition.collateralAmount * (protocolStats?.aptPrice || 4.70)) / 1.2 : 0; // 120% collateral ratio
+  // Calculate borrowing capacity correctly
+  const aptPrice = protocolStats?.aptPrice || 4.70;
+  const apexPrice = protocolStats?.apexPrice || 0.47;
+  const collateralValue = userPosition ? userPosition.collateralAmount * aptPrice : 0;
+  const maxBorrowableValue = collateralValue / 1.2; // 120% collateral ratio
+  const maxBorrowableApex = maxBorrowableValue / apexPrice;
+  
+  // Calculate available to borrow (subtract current debt)
+  const currentDebtValue = userPosition ? (userPosition.borrowedAmount + userPosition.interestAccrued) * apexPrice : 0;
+  const availableToBorrow = maxBorrowableValue - currentDebtValue;
+  const availableToBorrowApex = availableToBorrow / apexPrice;
   const currentDebt = userPosition?.borrowedAmount || 0;
   const interestAccrued = userPosition?.interestAccrued || 0;
   const [apexBalance] = useState(15.8); // TODO: Get real APEX balance from wallet
@@ -33,7 +43,7 @@ export function BorrowManager() {
       return;
     }
 
-    if (parseFloat(borrowAmount) > borrowingCapacity) {
+    if (parseFloat(borrowAmount) > availableToBorrowApex) {
       toast({
         title: "Exceeds Capacity",
         description: "Borrowing amount exceeds your available capacity.",
@@ -128,17 +138,20 @@ export function BorrowManager() {
 
   return (
     <div className="space-y-6">
-      {/* Borrowing Stats */}
+      {/* Borrowing Capacity Calculator */}
+      <BorrowingCapacity />
+
+      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="bg-primary/10 border-primary/20">
           <CardContent className="p-4">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Available to Borrow</p>
               <p className="text-xl font-semibold text-foreground">
-                {borrowingCapacity.toFixed(2)} APEX
+                {availableToBorrowApex.toFixed(2)} APEX
               </p>
               <Badge variant="outline" className="text-xs">
-                Based on collateral
+                ${availableToBorrow.toFixed(2)} USD
               </Badge>
             </div>
           </CardContent>
@@ -192,7 +205,7 @@ export function BorrowManager() {
                       variant="ghost"
                       size="sm"
                       className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
-                      onClick={() => setBorrowAmount(borrowingCapacity.toString())}
+                      onClick={() => setBorrowAmount(availableToBorrowApex.toFixed(2))}
                     >
                       MAX
                     </Button>
@@ -206,11 +219,22 @@ export function BorrowManager() {
 
               <Button 
                 onClick={handleBorrow}
-                disabled={!borrowAmount || parseFloat(borrowAmount) <= 0 || isLoading}
+                disabled={!borrowAmount || parseFloat(borrowAmount) <= 0 || isLoading || availableToBorrowApex <= 0}
                 className="w-full"
               >
-                {isLoading ? "Borrowing..." : "Borrow APEX"}
+                {isLoading ? "Borrowing..." : availableToBorrowApex <= 0 ? "No Borrowing Capacity" : "Borrow APEX"}
               </Button>
+              
+              {availableToBorrowApex <= 0 && (
+                <div className="text-center p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                  <p className="text-sm text-warning">
+                    {userPosition && userPosition.collateralAmount > 0 
+                      ? "You've reached your maximum borrowing capacity. Add more collateral or repay some debt to borrow more."
+                      : "Add APT as collateral first to start borrowing APEX."
+                    }
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

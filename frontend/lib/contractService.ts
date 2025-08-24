@@ -1,10 +1,14 @@
 import { aptosClient } from "@/utils/aptosClient";
 import { priceService } from "./priceService";
+import { NETWORK } from "@/constants";
 
 // Contract addresses (deployed to testnet)
 const APEX_TOKEN_ADDRESS = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::apex_token";
 const APEX_DEX_ADDRESS = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::apex_dex";
 const LENDING_ADDRESS = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::lending";
+
+console.log("ContractService initialized with network:", NETWORK);
+console.log("Contract addresses:", { LENDING_ADDRESS, APEX_DEX_ADDRESS, APEX_TOKEN_ADDRESS });
 
 export interface UserPosition {
   collateralAmount: number;
@@ -27,6 +31,8 @@ export class ContractService {
 
   constructor() {
     this.client = aptosClient();
+    console.log("ContractService client initialized:", this.client);
+    console.log("Client config:", this.client.config);
   }
 
 
@@ -75,16 +81,23 @@ export class ContractService {
         arguments: [userAddress]
       };
       
+      console.log("Fetching user position for:", userAddress);
+      console.log("Payload:", payload);
+      
       // @ts-ignore - SDK type issues
       const response = await this.client.view({ payload });
       
+      console.log("User position response:", response);
+      
       if (response && response.length >= 4) {
-        return {
+        const position = {
           collateralAmount: Number(response[0]) / Math.pow(10, 8), // APT
           borrowedAmount: Number(response[1]) / Math.pow(10, 8), // APEX
           interestAccrued: Number(response[2]) / Math.pow(10, 8), // APEX
           lastUpdated: Number(response[3]) * 1000 // Convert to milliseconds
         };
+        console.log("Parsed user position:", position);
+        return position;
       }
       return null;
     } catch (error) {
@@ -101,9 +114,16 @@ export class ContractService {
         arguments: ["0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f"]
       };
       
+      console.log("Fetching total collateral");
+      console.log("Payload:", payload);
+      
       // @ts-ignore - SDK type issues
       const response = await this.client.view({ payload });
-      return Number(response[0]) / Math.pow(10, 8);
+      
+      console.log("Total collateral response:", response);
+      const result = Number(response[0]) / Math.pow(10, 8);
+      console.log("Total collateral result:", result);
+      return result;
     } catch (error) {
       console.error("Error fetching total collateral:", error);
       return 0;

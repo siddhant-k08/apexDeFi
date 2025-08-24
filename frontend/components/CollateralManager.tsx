@@ -12,7 +12,7 @@ import { useContractService } from "@/hooks/useContractService";
 export function CollateralManager() {
   const { account } = useWallet();
   const { toast } = useToast();
-  const { addCollateral, withdrawCollateral, isLoading, protocolStats } = useContractService();
+  const { addCollateral, withdrawCollateral, isLoading, protocolStats, userPosition, refreshData } = useContractService();
   const [amount, setAmount] = useState("");
   const [aptBalance] = useState(25.7); // TODO: Get real APT balance from wallet
 
@@ -36,19 +36,36 @@ export function CollateralManager() {
     }
 
     try {
+      toast({
+        title: "Adding Collateral",
+        description: "Transaction submitted. Please wait for confirmation...",
+        variant: "default",
+      });
+      
       const txHash = await addCollateral(parseFloat(amount));
       
       toast({
-        title: "Collateral Added",
-        description: `Successfully added ${amount} APT as collateral. Transaction: ${txHash.slice(0, 8)}...`,
+        title: "Collateral Added Successfully!",
+        description: `Added ${amount} APT as collateral. Transaction: ${txHash.slice(0, 8)}...`,
         variant: "default",
       });
       
       setAmount("");
+      
+      // Show refresh reminder
+      setTimeout(() => {
+        toast({
+          title: "Data Refreshed",
+          description: "Your position has been updated. Check the debug info below for details.",
+          variant: "default",
+        });
+      }, 3000);
+      
     } catch (error) {
+      console.error("Add collateral error:", error);
       toast({
         title: "Transaction Failed",
-        description: "Failed to add collateral. Please try again.",
+        description: `Failed to add collateral: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -90,21 +107,51 @@ export function CollateralManager() {
   return (
     <div className="space-y-6">
       {/* Balance Info */}
-      <Card className="bg-secondary/30 border-secondary">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Available APT Balance</p>
-              <p className="text-xl font-semibold text-foreground">
-                {aptBalance.toFixed(2)} APT
-              </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-secondary/30 border-secondary">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Available APT Balance</p>
+                <p className="text-xl font-semibold text-foreground">
+                  {aptBalance.toFixed(2)} APT
+                </p>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                ≈ ${(aptBalance * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
+              </Badge>
             </div>
-            <Badge variant="outline" className="text-xs">
-              ≈ ${(aptBalance * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-primary/30 border-primary">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Current Collateral</p>
+                <p className="text-xl font-semibold text-foreground">
+                  {userPosition?.collateralAmount.toFixed(4) || "0.0000"} APT
+                </p>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                ≈ ${((userPosition?.collateralAmount || 0) * (protocolStats?.aptPrice || 4.70)).toFixed(2)} USD
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Refresh Button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={refreshData} 
+          disabled={isLoading}
+          variant="outline" 
+          size="sm"
+        >
+          {isLoading ? "Refreshing..." : "🔄 Refresh Data"}
+        </Button>
+      </div>
 
       {/* Add Collateral */}
       <Card>

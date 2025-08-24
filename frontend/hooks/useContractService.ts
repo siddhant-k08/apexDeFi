@@ -19,7 +19,9 @@ export function useContractService() {
     try {
       setIsLoading(true);
       setError(null);
+      console.log("Fetching position for account:", account.address.toString());
       const position = await contractService.getUserPosition(account.address.toString());
+      console.log("Fetched position:", position);
       setUserPosition(position);
     } catch (err) {
       console.error("Error fetching user position:", err);
@@ -46,10 +48,19 @@ export function useContractService() {
 
   // Refresh all data
   const refreshData = async () => {
-    await Promise.all([
-      fetchUserPosition(),
-      fetchProtocolStats()
-    ]);
+    try {
+      setIsLoading(true);
+      // Add a small delay to ensure blockchain state is updated
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await Promise.all([
+        fetchUserPosition(),
+        fetchProtocolStats()
+      ]);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Transaction functions
