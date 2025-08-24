@@ -14,11 +14,11 @@ export function Header() {
               <span className="text-white font-bold text-sm">A</span>
             </div>
             <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-              Apex DeFi
+              APEX DeFi
             </h1>
           </div>
 
-          {/* Navigation */}
+          {/* Navigation
           <nav className="hidden md:flex items-center space-x-8">
             <a href="#" className="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">
               Docs
@@ -26,7 +26,7 @@ export function Header() {
             <a href="#" className="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">
               Support
             </a>
-          </nav>
+          </nav> */}
 
           {/* Wallet Connection */}
           <div className="flex items-center space-x-4">
