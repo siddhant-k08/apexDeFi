@@ -1,8 +1,11 @@
 import { aptosClient } from "@/utils/aptosClient";
 import { LENDING_ABI } from "@/utils/lending_abi";
 import { DEX_ABI } from "@/utils/dex_abi";
-
-
+import { 
+  OCTAS_PER_TOKEN,
+  LENDING_ADDRESS,
+  APEX_DEX_ADDRESS
+} from "@/constants";
 
 export class TransactionService {
   private client: ReturnType<typeof aptosClient>;
@@ -13,15 +16,15 @@ export class TransactionService {
 
   // Helper method to convert human amount to octas (8 decimal places)
   private toOctas(amount: number): bigint {
-    return BigInt(Math.floor(amount * Math.pow(10, 8)));
+    return BigInt(Math.floor(amount * OCTAS_PER_TOKEN));
   }
 
   // Add APT collateral to lending protocol
   async addCollateral(walletClient: any, amount: number): Promise<string> {
     try {
       const amountOctas = this.toOctas(amount);
-      const lendingOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const lendingOwner = LENDING_ADDRESS.split("::")[0];
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(LENDING_ABI).add_collateral({
         type_arguments: [],
@@ -43,8 +46,8 @@ export class TransactionService {
   async withdrawCollateral(walletClient: any, amount: number): Promise<string> {
     try {
       const amountOctas = this.toOctas(amount);
-      const lendingOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const lendingOwner = LENDING_ADDRESS.split("::")[0];
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(LENDING_ABI).withdraw_collateral({
         type_arguments: [],
@@ -66,8 +69,8 @@ export class TransactionService {
   async borrowApex(walletClient: any, amount: number): Promise<string> {
     try {
       const amountOctas = this.toOctas(amount);
-      const lendingOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const lendingOwner = LENDING_ADDRESS.split("::")[0];
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(LENDING_ABI).borrow_apex({
         type_arguments: [],
@@ -89,8 +92,8 @@ export class TransactionService {
   async repayApex(walletClient: any, amount: number): Promise<string> {
     try {
       const amountOctas = this.toOctas(amount);
-      const lendingOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const lendingOwner = LENDING_ADDRESS.split("::")[0];
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(LENDING_ABI).repay_apex({
         type_arguments: [],
@@ -111,8 +114,8 @@ export class TransactionService {
   // Repay accrued interest
   async repayInterest(walletClient: any): Promise<string> {
     try {
-      const lendingOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const lendingOwner = LENDING_ADDRESS.split("::")[0];
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(LENDING_ABI).repay_interest({
         type_arguments: [],
@@ -133,8 +136,8 @@ export class TransactionService {
   // Liquidate a user's position
   async liquidate(walletClient: any, userAddress: string): Promise<string> {
     try {
-      const lendingOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const lendingOwner = LENDING_ADDRESS.split("::")[0];
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(LENDING_ABI).liquidate({
         type_arguments: [],
@@ -156,7 +159,7 @@ export class TransactionService {
   async swapAptToApex(walletClient: any, aptAmount: number): Promise<string> {
     try {
       const aptAmountOctas = this.toOctas(aptAmount);
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(DEX_ABI).swap_apt_to_apex({
         type_arguments: [],
@@ -178,7 +181,7 @@ export class TransactionService {
   async swapApexToApt(walletClient: any, apexAmount: number): Promise<string> {
     try {
       const apexAmountOctas = this.toOctas(apexAmount);
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(DEX_ABI).swap_apex_to_apt({
         type_arguments: [],
@@ -201,7 +204,7 @@ export class TransactionService {
     try {
       const aptAmountOctas = this.toOctas(aptAmount);
       const apexAmountOctas = this.toOctas(apexAmount);
-      const dexOwner = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+      const dexOwner = APEX_DEX_ADDRESS.split("::")[0];
       
       const committedTransaction = await walletClient.useABI(DEX_ABI).add_liquidity({
         type_arguments: [],

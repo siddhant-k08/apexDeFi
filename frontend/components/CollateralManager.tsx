@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useContractService } from "@/hooks/useContractService";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { balanceService } from "@/lib/balanceService";
 import { 
   DEFAULT_APT_PRICE, 
   OCTAS_PER_TOKEN 
@@ -12,6 +14,7 @@ import {
 
 export function CollateralManager() {
   const { toast } = useToast();
+  const { account } = useWallet();
   const { addCollateral, withdrawCollateral, isLoading, protocolStats, userPosition, refreshData, tokenBalances } = useContractService();
   const [amount, setAmount] = useState("");
 
@@ -25,10 +28,14 @@ export function CollateralManager() {
       return;
     }
 
+    console.log("Current token balances:", tokenBalances);
+    console.log("Attempting to add collateral:", parseFloat(amount));
+    console.log("User address:", account?.address);
+
     if (parseFloat(amount) > tokenBalances.apt) {
       toast({
         title: "Insufficient Balance",
-        description: "You don't have enough APT tokens.",
+        description: `You have ${tokenBalances.apt.toFixed(4)} APT but trying to add ${amount} APT. Please refresh your balance or check your wallet.`,
         variant: "destructive",
       });
       return;
@@ -51,6 +58,7 @@ export function CollateralManager() {
       
       setAmount("");
     } catch (error) {
+      console.error("Error adding collateral:", error);
       toast({
         title: "Transaction Failed",
         description: "Failed to add collateral. Please try again.",
@@ -92,6 +100,73 @@ export function CollateralManager() {
     setAmount(tokenBalances.apt.toString());
   };
 
+  const handleRefreshBalance = async () => {
+    try {
+      await refreshData();
+      toast({
+        title: "Balance Refreshed",
+        description: `Current APT balance: ${tokenBalances.apt.toFixed(4)}`,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh balance. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDirectBalanceCheck = async () => {
+    if (!account?.address) {
+      toast({
+        title: "No Wallet Connected",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log("🧪 Testing connection and refreshing balance for address:", account.address.toString());
+      
+      // Test RPC connections first
+      const rpcResults = await balanceService.testRpcConnection();
+      console.log("📊 RPC connection results:", rpcResults);
+      
+      // Test SDK connection
+      const connectionTest = await balanceService.testConnection();
+      if (!connectionTest) {
+        toast({
+          title: "Connection Failed",
+          description: `SDK connection failed. Custom RPC: ${rpcResults.custom ? '✅' : '❌'}, Default RPC: ${rpcResults.default ? '✅' : '❌'}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("✅ SDK connection successful");
+      
+      // Clear cache and refresh data
+      await refreshData();
+      
+      toast({
+        title: "Connection Test & Balance Refresh",
+        description: `Connection: ✅ | APT Balance: ${tokenBalances.apt.toFixed(4)}`,
+        variant: "default",
+      });
+      
+      console.log("✅ Balance refreshed after connection test:", tokenBalances.apt, "APT");
+    } catch (error) {
+      console.error("❌ Connection test error:", error);
+      toast({
+        title: "Test Failed",
+        description: "Failed to test connection or refresh balance.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
       <CardHeader>
@@ -113,6 +188,14 @@ export function CollateralManager() {
                 <p className="text-sm text-slate-500">
                   ≈ ${(tokenBalances.apt * (protocolStats?.aptPrice || DEFAULT_APT_PRICE)).toFixed(2)} USD
                 </p>
+                <Button 
+                  onClick={handleRefreshBalance}
+                  variant="outline" 
+                  size="sm"
+                  className="mt-2"
+                >
+                  🔄 Refresh Balance
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -131,6 +214,38 @@ export function CollateralManager() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Debug Info */}
+        <Card className="bg-yellow-50/50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800">
+          <CardContent className="p-4">
+            <div className="text-center space-y-2">
+              <p className="text-sm text-slate-600 dark:text-slate-400">Debug Information</p>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <div>User Address: {account?.address?.toString() || "Not connected"}</div>
+                <div>APT Balance: {tokenBalances.apt.toFixed(4)} APT</div>
+                <div>APEX Balance: {tokenBalances.apex.toFixed(4)} APEX</div>
+                <div>Network: {import.meta.env.VITE_APP_NETWORK || "testnet"}</div>
+                <div>Custom RPC: {import.meta.env.VITE_APP_NETWORK === "testnet" ? "Enabled" : "Disabled"}</div>
+              </div>
+              <div className="flex gap-2 justify-center mt-2">
+                <Button 
+                  onClick={handleDirectBalanceCheck}
+                  variant="outline" 
+                  size="sm"
+                >
+                  🧪 Test Connection
+                </Button>
+                <Button 
+                  onClick={handleRefreshBalance}
+                  variant="outline" 
+                  size="sm"
+                >
+                  🔄 Refresh
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Add Collateral */}
         <div className="space-y-4">
@@ -199,7 +314,7 @@ export function CollateralManager() {
             variant="outline" 
             size="sm"
           >
-            {isLoading ? "Refreshing..." : "🔄 Refresh"}
+            {isLoading ? "Refreshing..." : "🔄 Refresh All Data"}
           </Button>
         </div>
       </CardContent>

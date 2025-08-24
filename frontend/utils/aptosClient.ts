@@ -1,15 +1,21 @@
-import { NETWORK, APTOS_API_KEY } from "@/constants";
-import { Aptos, AptosConfig } from "@aptos-labs/ts-sdk";
+import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
+import { NETWORK, CUSTOM_TESTNET_RPC, DEFAULT_TESTNET_RPC } from "@/constants";
 
-// Create config with optional API key
-const config: any = { network: NETWORK };
-if (APTOS_API_KEY) {
-  config.clientConfig = { API_KEY: APTOS_API_KEY };
-}
+export const aptosClient = () => {
+  // Try custom RPC first, fallback to default
+  const fullnodeUrl = CUSTOM_TESTNET_RPC || DEFAULT_TESTNET_RPC;
+  
+  console.log("🔧 Creating Aptos client with config:", {
+    network: NETWORK,
+    fullnode: fullnodeUrl,
+    faucet: "https://faucet.testnet.aptoslabs.com"
+  });
+  
+  const config = new AptosConfig({
+    network: NETWORK as Network,
+    fullnode: fullnodeUrl,
+    faucet: "https://faucet.testnet.aptoslabs.com",
+  });
 
-const aptos = new Aptos(new AptosConfig(config));
-
-// Reuse same Aptos instance to utilize cookie based sticky routing
-export function aptosClient() {
-  return aptos;
-}
+  return new Aptos(config);
+};

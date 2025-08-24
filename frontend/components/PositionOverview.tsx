@@ -109,7 +109,7 @@ export function PositionOverview() {
           <Progress value={utilizationPercentage} className="h-3" />
           <div className="flex justify-between text-xs text-slate-500">
             <span>0% (Safe)</span>
-            <span>83.3% (120% Ratio)</span>
+            <span>83.3% ({LIQUIDATION_RATIO * 100}% Ratio)</span>
             <span>100% (Max)</span>
           </div>
         </div>

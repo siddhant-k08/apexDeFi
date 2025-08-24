@@ -1,7 +1,8 @@
-// Network and API Configuration
-export const NETWORK = import.meta.env.VITE_APP_NETWORK ?? "testnet";
-export const MODULE_ADDRESS = import.meta.env.VITE_MODULE_ADDRESS;
-export const APTOS_API_KEY = import.meta.env.VITE_APTOS_API_KEY;
+// Network Configuration
+export const NETWORK = "testnet"; // Force testnet for now
+export const APTOS_API_KEY = import.meta.env.VITE_APTOS_API_KEY || "";
+export const CUSTOM_TESTNET_RPC = "https://rpc.ankr.com/premium-http/aptos_testnet/95fd332a08413066309858de41b7a976cd95eeea2a324638b5ec690583e6c240/v1";
+export const DEFAULT_TESTNET_RPC = "https://fullnode.testnet.aptoslabs.com";
 
 // Protocol Configuration
 export const COLLATERAL_RATIO = 1.2; // 120% collateral ratio
@@ -30,10 +31,11 @@ export const PRICE_CACHE_DURATION = 30000; // 30 seconds
 export const DATA_REFRESH_INTERVAL = 30000; // 30 seconds
 export const TRANSACTION_TIMEOUT = 60000; // 60 seconds
 
-// Contract Addresses (deployed to testnet)
-export const APEX_TOKEN_ADDRESS = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::apex_token";
-export const APEX_DEX_ADDRESS = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::apex_dex";
-export const LENDING_ADDRESS = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f::lending";
+// Contract Addresses (deployer account address)
+export const DEPLOYER_ADDRESS = "0x4512963ba7f24126be6608b9c8081f013e193dc9ac8ccd6679d92c3eda2f4a5f";
+export const LENDING_ADDRESS = `${DEPLOYER_ADDRESS}::lending`;
+export const APEX_DEX_ADDRESS = `${DEPLOYER_ADDRESS}::apex_dex`;
+export const APEX_TOKEN_ADDRESS = `${DEPLOYER_ADDRESS}::apex_token::APEX`;
 
 // Utility Functions
 export const formatTokenAmount = (amount: number, decimals: number = 8): number => {

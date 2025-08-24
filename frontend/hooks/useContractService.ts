@@ -50,13 +50,30 @@ export function useContractService() {
 
   // Fetch token balances
   const fetchTokenBalances = async () => {
-    if (!account?.address) return;
+    if (!account?.address) {
+      console.log("⚠️ No account address available for balance fetching");
+      return;
+    }
     
     try {
+      console.log("🚀 Starting balance fetch for address:", account.address.toString());
+      
+      // Test connection first
+      const connectionTest = await balanceService.testConnection();
+      if (!connectionTest) {
+        console.error("❌ Aptos client connection failed");
+        setError("Failed to connect to Aptos testnet");
+        return;
+      }
+      
+      console.log("✅ Aptos client connection successful");
+      
       const balances = await balanceService.getTokenBalances(account.address.toString());
+      console.log("✅ Balance fetch completed:", balances);
       setTokenBalances(balances);
     } catch (err) {
-      console.error("Error fetching token balances:", err);
+      console.error("❌ Error fetching token balances:", err);
+      setError("Failed to fetch wallet balances");
     }
   };
 
@@ -64,6 +81,12 @@ export function useContractService() {
   const refreshData = async () => {
     try {
       setIsLoading(true);
+      
+      // Clear balance cache to ensure fresh data
+      if (account?.address) {
+        balanceService.clearCache(account.address.toString());
+      }
+      
       // Add a small delay to ensure blockchain state is updated
       await new Promise(resolve => setTimeout(resolve, 2000));
       await Promise.all([
